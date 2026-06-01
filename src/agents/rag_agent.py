@@ -63,7 +63,7 @@ class RAGAgent:
     ) -> str:
         """
         Construye una respuesta simple usando los fragmentos recuperados.
-        Luego podremos reemplazar esta parte por una llamada a un LLM.
+        Reemplazar esta parte por una llamada a un LLM!
         """
 
         main_context = context_parts[0]
