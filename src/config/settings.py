@@ -1,0 +1,24 @@
+from pathlib import Path
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+
+class Settings:
+    APP_NAME: str = os.getenv("APP_NAME", "AI Agents RAG System")
+
+    BASE_DIR: Path = Path(__file__).resolve().parents[2]
+
+    NOTES_DIR: Path = BASE_DIR / os.getenv("NOTES_DIR", "data/notes")
+    PROCESSED_DIR: Path = BASE_DIR / os.getenv("PROCESSED_DIR", "data/processed")
+    VECTOR_DB_DIR: Path = BASE_DIR / os.getenv("VECTOR_DB_DIR", "vector_store/chroma")
+
+    COLLECTION_NAME: str = os.getenv("COLLECTION_NAME", "course_notes")
+    EMBEDDING_MODEL: str = os.getenv(
+        "EMBEDDING_MODEL",
+        "sentence-transformers/all-MiniLM-L6-v2"
+    )
+
+
+settings = Settings()
