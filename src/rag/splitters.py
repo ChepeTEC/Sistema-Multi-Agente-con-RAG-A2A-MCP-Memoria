@@ -20,6 +20,7 @@ ChromaDB
 """
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from src.rag.metadata import extract_section_from_text
 
 
 def split_documents(
@@ -41,11 +42,19 @@ def split_documents(
     for doc in documents:
         split_texts = splitter.split_text(doc["text"])
 
+        current_section = None
+
         for index, chunk_text in enumerate(split_texts):
+            detected_section = extract_section_from_text(chunk_text)
+
+            if detected_section:
+                current_section = detected_section
+
             metadata = doc["metadata"].copy()
             metadata["chunk_index"] = index
             metadata["chunk_size"] = chunk_size
             metadata["chunk_overlap"] = chunk_overlap
+            metadata["section"] = current_section
 
             chunks.append({
                 "text": chunk_text,

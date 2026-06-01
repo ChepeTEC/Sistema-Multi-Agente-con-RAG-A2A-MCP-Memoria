@@ -10,7 +10,6 @@ vector_db.py busca en ChromaDB
         ↓
 devuelve los fragmentos más parecidos
 """
-
 from pathlib import Path
 import chromadb
 
@@ -21,6 +20,23 @@ class ChromaVectorStore:
         self.collection = self.client.get_or_create_collection(
             name=collection_name
         )
+
+    def _sanitize_metadata(self, metadata: dict) -> dict:
+        """
+        ChromaDB solo acepta metadata con valores str, int, float o bool.
+        Aquí convertimos None a string vacío y cualquier valor raro a string.
+        """
+        clean_metadata = {}
+
+        for key, value in metadata.items():
+            if value is None:
+                clean_metadata[key] = ""
+            elif isinstance(value, (str, int, float, bool)):
+                clean_metadata[key] = value
+            else:
+                clean_metadata[key] = str(value)
+
+        return clean_metadata
 
     def add_chunks(
         self,
@@ -42,7 +58,7 @@ class ChromaVectorStore:
 
             ids.append(chunk_id)
             documents.append(chunk["text"])
-            metadatas.append(metadata)
+            metadatas.append(self._sanitize_metadata(metadata))
 
         self.collection.add(
             ids=ids,
