@@ -35,7 +35,7 @@ class RAGAgent:
         clean_chunks = self._clean_retrieved_chunks(retrieved_chunks)
         sources = self._build_unique_sources(clean_chunks)
         prompt = self._build_prompt(question, clean_chunks)
-        generated_answer = self.llm.generate(prompt)
+        generated_answer = self.llm.generate(prompt)["text"]
         generated_answer = self._remove_llm_sources(generated_answer)
 
         final_answer = (

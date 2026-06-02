@@ -20,5 +20,17 @@ class Settings:
         "sentence-transformers/all-MiniLM-L6-v2"
     )
 
+    TAVILY_API_KEY: str | None = os.getenv("TAVILY_API_KEY")
+    GEMINI_API_KEY: str | None = os.getenv("GEMINI_API_KEY")
+    GOOGLE_API_KEY: str | None = os.getenv("GOOGLE_API_KEY")
+    RAG_LLM_MODEL: str = os.getenv(
+        "RAG_LLM_MODEL",
+        "gemini-2.5-flash"
+    )
+    WEB_SEARCH_LLM_MODEL: str = os.getenv(
+        "WEB_SEARCH_LLM_MODEL",
+        "gemini-2.5-flash"
+    )
+
 
 settings = Settings()
