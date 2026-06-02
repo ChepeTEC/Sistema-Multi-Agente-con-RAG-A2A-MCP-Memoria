@@ -11,6 +11,7 @@ result = rag_agent.answer("¿Qué es inteligencia artificial?")
 answer = result["answer"]
 sources = result["sources"]
 chunks = result["chunks"]
+agent = result["agent"]  
 
 """
 def print_sources(sources: list[dict]) -> None:

@@ -1,19 +1,19 @@
 from src.tools.rag_tool import RAGTool
-
-from src.tools.rag_tool import RAGTool
 from src.rag.preprocessors import clean_text
+from src.llm.gemini_client import GeminiClient
 
 
 class RAGAgent:
     """
     Agente especializado en responder preguntas usando los apuntes del curso.
 
-    Usa RAGTool para recuperar fragmentos relevantes desde ChromaDB y
-    construye una respuesta fundamentada con fuentes.
+    Recupera fragmentos relevantes con RAGTool y usa un LLM para generar
+    una respuesta fundamentada únicamente en esos fragmentos.
     """
 
     def __init__(self):
         self.rag_tool = RAGTool()
+        self.llm = GeminiClient()
 
     def answer(self, question: str, n_results: int = 5) -> dict:
         if not question or not question.strip():
@@ -28,30 +28,65 @@ class RAGAgent:
             return {
                 "answer": "No encontré información relevante en los apuntes.",
                 "sources": [],
-                "chunks": []
+                "chunks": [],
+                "agent": "RAGAgent"
             }
 
         clean_chunks = self._clean_retrieved_chunks(retrieved_chunks)
         sources = self._build_unique_sources(clean_chunks)
-        answer = self._build_answer(question, clean_chunks, sources)
+        prompt = self._build_prompt(question, clean_chunks)
+        generated_answer = self.llm.generate(prompt)
+        generated_answer = self._remove_llm_sources(generated_answer)
+
+        final_answer = (
+            f"{generated_answer}\n\n"
+            f"Fuentes consultadas:\n"
+            f"{self._format_sources(sources)}"
+        )
 
         return {
-            "answer": answer,
+            "answer": final_answer,
             "sources": sources,
-            "chunks": clean_chunks
+            "chunks": clean_chunks,
+            "agent": "RAGAgent"
         }
+    def _remove_llm_sources(self, answer: str) -> str:
+        """
+        Elimina secciones de fuentes que el LLM pueda agregar aunque el prompt
+        le indique no hacerlo. Las fuentes oficiales se agregan después desde
+        los metadatos recuperados por el sistema.
+        """
+        source_markers = [
+            "\nFuentes:",
+            "\n**Fuentes:**",
+            "\nFuente:",
+            "\n**Fuente:**",
+            "\nReferencias:",
+            "\n**Referencias:**",
+            "\nCitas:",
+            "\n**Citas:**",
+        ]
+
+        cleaned_answer = answer.strip()
+
+        for marker in source_markers:
+            position = cleaned_answer.find(marker)
+
+            if position != -1:
+                cleaned_answer = cleaned_answer[:position].strip()
+                break
+
+        return cleaned_answer
 
     def _clean_retrieved_chunks(self, chunks: list[dict]) -> list[dict]:
         """
-        Limpia el texto recuperado para que no se vea tan crudo.
+        Limpia el texto recuperado para pasarlo al LLM.
         """
         cleaned_chunks = []
 
         for chunk in chunks:
-            cleaned_text = clean_text(chunk["text"])
-
             cleaned_chunks.append({
-                "text": cleaned_text,
+                "text": clean_text(chunk["text"]),
                 "metadata": chunk["metadata"],
                 "distance": chunk.get("distance")
             })
@@ -93,101 +128,63 @@ class RAGAgent:
 
         return unique_sources
 
-    def _build_answer(
-        self,
-        question: str,
-        chunks: list[dict],
-        sources: list[dict]
-    ) -> str:
+    def _build_prompt(self, question: str, chunks: list[dict]) -> str:
         """
-        Construye una respuesta más ordenada a partir de los chunks recuperados.
-
-        Esta versión todavía no usa un LLM externo. Es una respuesta extractiva
-        resumida y organizada para el Hito 1.
+        Construye el prompt que recibirá Gemini.
         """
+        context = self._format_context(chunks)
 
-        relevant_text = self._combine_relevant_text(chunks[:3])
-        summary = self._simple_summarize(question, relevant_text)
-        sources_text = self._format_sources(sources)
+        return f"""
+Eres un agente RAG académico para un curso de Inteligencia Artificial.
 
-        return (
-            f"Pregunta: {question}\n\n"
-            f"Respuesta:\n"
-            f"{summary}\n\n"
-            f"Fuentes consultadas:\n"
-            f"{sources_text}"
-        )
+Tu tarea es responder la pregunta del usuario usando únicamente el contexto recuperado desde los apuntes del curso.
 
-    def _combine_relevant_text(self, chunks: list[dict]) -> str:
+Reglas:
+- No inventes información.
+- No uses conocimiento externo.
+- Si el contexto no contiene suficiente información, dilo claramente.
+- Redacta una respuesta clara, ordenada y breve.
+- No copies fragmentos completos literalmente si no es necesario.
+- Puedes resumir y reorganizar las ideas.
+- No agregues una sección de fuentes.
+- No escribas "Fuentes:" ni cites fragmentos al final.
+- Solo redacta la respuesta principal.
+- Las fuentes serán agregadas automáticamente por el sistema.
+
+Pregunta del usuario:
+{question}
+
+Contexto recuperado:
+{context}
+
+Respuesta:
+""".strip()
+
+    def _format_context(self, chunks: list[dict]) -> str:
         """
-        Une los textos más relevantes recuperados.
+        Formatea los chunks recuperados para incluirlos como contexto del LLM.
         """
-        texts = []
+        context_parts = []
 
-        for chunk in chunks:
-            text = chunk["text"].strip()
+        for index, chunk in enumerate(chunks, start=1):
+            metadata = chunk["metadata"]
 
-            if text:
-                texts.append(text)
+            source = metadata.get("source", "desconocido")
+            page = metadata.get("page", "desconocida")
+            section = metadata.get("section", "")
 
-        return " ".join(texts)
+            header = f"[Fragmento {index} | Archivo: {source} | Página: {page}"
 
-    def _simple_summarize(self, question: str, text: str) -> str:
-        """
-        Genera una respuesta básica sin LLM.
+            if section:
+                header += f" | Sección: {section}"
 
-        Toma las oraciones más relevantes que contienen términos importantes
-        de la pregunta. Si no encuentra coincidencias claras, usa el inicio del
-        contexto recuperado.
-        """
+            header += "]"
 
-        question_terms = [
-            term.lower()
-            for term in question.replace("¿", "").replace("?", "").split()
-            if len(term) > 3
-        ]
+            context_parts.append(
+                f"{header}\n{chunk['text']}"
+            )
 
-        sentences = self._split_into_sentences(text)
-        selected_sentences = []
-
-        for sentence in sentences:
-            sentence_lower = sentence.lower()
-
-            if any(term in sentence_lower for term in question_terms):
-                selected_sentences.append(sentence.strip())
-
-            if len(selected_sentences) >= 3:
-                break
-
-        if not selected_sentences:
-            selected_sentences = sentences[:3]
-
-        cleaned_answer = " ".join(selected_sentences)
-        cleaned_answer = cleaned_answer.strip()
-
-        if not cleaned_answer:
-            return "No fue posible construir una respuesta clara con los fragmentos recuperados."
-
-        return (
-            "Según los apuntes recuperados, "
-            + cleaned_answer[0].lower()
-            + cleaned_answer[1:]
-        )
-
-    def _split_into_sentences(self, text: str) -> list[str]:
-        """
-        Divide texto en oraciones simples.
-        """
-        raw_sentences = text.replace("\n", " ").split(".")
-        sentences = []
-
-        for sentence in raw_sentences:
-            sentence = sentence.strip()
-
-            if len(sentence) > 30:
-                sentences.append(sentence + ".")
-
-        return sentences
+        return "\n\n".join(context_parts)
 
     def _format_sources(self, sources: list[dict]) -> str:
         """

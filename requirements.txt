@@ -6,3 +6,4 @@ sentence-transformers
 langchain
 langchain-community
 langchain-text-splitters
+google-genai
