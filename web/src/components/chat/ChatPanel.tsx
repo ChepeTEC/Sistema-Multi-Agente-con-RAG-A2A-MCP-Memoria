@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useSessions } from "@/context/SessionsContext";
-import { useMockOrchestrator } from "@/hooks/useMockOrchestrator";
+import { useOrchestrator } from "@/hooks/useOrchestrator";
 import { useAutoScroll } from "@/hooks/useAutoScroll";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,7 +16,7 @@ const SUGGESTIONS = [
 
 export function ChatPanel() {
   const { active } = useSessions();
-  const { send, isThinking } = useMockOrchestrator();
+  const { send, isThinking } = useOrchestrator();
   const [input, setInput] = useState("");
   const scrollRef = useAutoScroll(active.messages.length + (isThinking ? 1 : 0));
 

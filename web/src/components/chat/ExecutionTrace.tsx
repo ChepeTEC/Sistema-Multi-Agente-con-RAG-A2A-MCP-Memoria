@@ -53,6 +53,26 @@ export function ExecutionTraceView({ trace }: { trace: ExecutionTrace }) {
             </ul>
           </div>
 
+          {trace.decisionReason && (
+            <div className="rounded-md border border-border bg-background/40 px-2 py-1.5">
+              <div className="mb-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+                razon de decision
+              </div>
+              <p className="text-[11px] leading-snug text-foreground/90">{trace.decisionReason}</p>
+            </div>
+          )}
+
+          {trace.backendTrace && (
+            <div className="rounded-md border border-border bg-background/40 px-2 py-1.5">
+              <div className="mb-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+                trace backend
+              </div>
+              <pre className="max-h-40 overflow-auto whitespace-pre-wrap font-mono text-[10px] text-foreground/80">
+                {JSON.stringify(trace.backendTrace, null, 2)}
+              </pre>
+            </div>
+          )}
+
           <div className="text-[10px] text-muted-foreground">
             rol auditado: <span className="text-foreground">{trace.role}</span>
           </div>

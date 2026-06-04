@@ -25,6 +25,8 @@ export interface ExecutionTrace {
   tools: ToolCall[];
   ragConfig?: RagConfig;
   role: UserRole;
+  decisionReason?: string;
+  backendTrace?: Record<string, unknown>;
 }
 
 export interface ChatMessage {

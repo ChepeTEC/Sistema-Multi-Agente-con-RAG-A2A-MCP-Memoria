@@ -27,6 +27,10 @@ class Settings:
         "RAG_LLM_MODEL",
         "gemini-2.5-flash"
     )
+    ORCHESTRATOR_LLM_MODEL: str = os.getenv(
+        "ORCHESTRATOR_LLM_MODEL",
+        "gemini-2.5-pro"
+    )
     WEB_SEARCH_LLM_MODEL: str = os.getenv(
         "WEB_SEARCH_LLM_MODEL",
         "gemini-2.5-flash"
