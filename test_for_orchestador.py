@@ -1,19 +1,6 @@
 from src.agents.rag_agent import RAGAgent
 
-"""
-COsillas utiles para el orchestador:
 
-from src.agents.rag_agent import RAGAgent
-
-rag_agent = RAGAgent()
-result = rag_agent.answer("¿Qué es inteligencia artificial?")
-
-answer = result["answer"]
-sources = result["sources"]
-chunks = result["chunks"]
-agent = result["agent"]  
-
-"""
 def print_sources(sources: list[dict]) -> None:
     print("\nFuentes recuperadas:")
 
@@ -37,15 +24,6 @@ def main():
     """
     Archivo de prueba para que el encargado del OrchestratorAgent
     pueda ver cómo consumir el RAGAgent.
-
-    El orquestador solo necesita llamar:
-
-        result = rag_agent.answer(question)
-
-    Y recibirá un diccionario con:
-        - answer: respuesta final
-        - sources: fuentes usadas
-        - chunks: fragmentos recuperados como evidencia interna
     """
 
     rag_agent = RAGAgent()

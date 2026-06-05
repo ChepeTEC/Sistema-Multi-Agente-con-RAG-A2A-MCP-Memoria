@@ -1,6 +1,9 @@
+from langsmith import trace
+
 from src.tools.rag_tool import RAGTool
 from src.rag.preprocessors import clean_text
 from src.llm.gemini_client import GeminiClient
+from src.observability.langfuse_client import langfuse_tracer
 
 
 class RAGAgent:
@@ -19,37 +22,118 @@ class RAGAgent:
         if not question or not question.strip():
             raise ValueError("La pregunta no puede estar vacía.")
 
-        retrieved_chunks = self.rag_tool.search_notes(
-            query=question,
-            n_results=n_results
+        trace = langfuse_tracer.create_trace(
+            name="rag_agent_answer",
+            input_data={"question": question, "n_results": n_results},
+            metadata={"agent": "RAGAgent"}
         )
 
-        if not retrieved_chunks:
-            return {
-                "answer": "No encontré información relevante en los apuntes.",
-                "sources": [],
-                "chunks": [],
+        try:
+            retrieved_chunks = self.rag_tool.search_notes(
+                query=question,
+                n_results=n_results
+            )
+
+            langfuse_tracer.create_span(
+                trace=trace,
+                name="rag_retrieval",
+                input_data={"query": question, "n_results": n_results},
+                output_data={"retrieved_chunks_count": len(retrieved_chunks)},
+                metadata={
+                    "tool": "RAGTool",
+                    "vector_db": "ChromaDB",
+                    "raw_chunks": self._chunks_for_langfuse(retrieved_chunks)
+                }
+            )
+
+            if not retrieved_chunks:
+                result = {
+                    "answer": "No encontré información relevante en los apuntes.",
+                    "sources": [],
+                    "chunks": [],
+                    "agent": "RAGAgent"
+                }
+
+                langfuse_tracer.update_trace_output(trace, result)
+                return result
+
+            clean_chunks = self._clean_retrieved_chunks(retrieved_chunks)
+            sources = self._build_unique_sources(clean_chunks)
+            prompt = self._build_prompt(question, clean_chunks)
+            llm_result = self.llm.generate(prompt)
+            generated_answer = llm_result["text"]
+
+            langfuse_tracer.create_generation(
+                trace=trace,
+                name="gemini_generation",
+                model=getattr(self.llm, "model", "gemini"),
+                prompt=prompt,
+                response=generated_answer,
+                metadata={
+                    "agent": "RAGAgent",
+                    "sources": sources,
+                    "chunks_used": self._chunks_for_langfuse(clean_chunks)
+                }
+            )
+
+            generated_answer = self._remove_llm_sources(generated_answer)
+
+            final_answer = (
+                f"{generated_answer}\n\n"
+                f"Fuentes consultadas:\n"
+                f"{self._format_sources(sources)}"
+            )
+
+            result = {
+                "answer": final_answer,
+                "sources": sources,
+                "chunks": clean_chunks,
                 "agent": "RAGAgent"
             }
 
-        clean_chunks = self._clean_retrieved_chunks(retrieved_chunks)
-        sources = self._build_unique_sources(clean_chunks)
-        prompt = self._build_prompt(question, clean_chunks)
-        generated_answer = self.llm.generate(prompt)["text"]
-        generated_answer = self._remove_llm_sources(generated_answer)
+            langfuse_tracer.update_trace_output(trace, result)
+            return result
 
-        final_answer = (
-            f"{generated_answer}\n\n"
-            f"Fuentes consultadas:\n"
-            f"{self._format_sources(sources)}"
-        )
+        except Exception as exc:
+            langfuse_tracer.create_span(
+                trace=trace,
+                name="rag_agent_error",
+                input_data={"question": question},
+                output_data={"error": str(exc)},
+                metadata={"agent": "RAGAgent"}
+            )
+            langfuse_tracer.update_trace_output(
+                trace,
+                {"error": str(exc), "agent": "RAGAgent"}
+            )
+            raise
 
-        return {
-            "answer": final_answer,
-            "sources": sources,
-            "chunks": clean_chunks,
-            "agent": "RAGAgent"
-        }
+        finally:
+            langfuse_tracer.close_trace(trace)
+            langfuse_tracer.flush()
+
+    def _chunks_for_langfuse(self, chunks: list[dict]) -> list[dict]:
+        """
+        Prepara los chunks para enviarlos a Langfuse sin saturar la traza.
+        """
+        formatted_chunks = []
+
+        for index, chunk in enumerate(chunks, start=1):
+            metadata = chunk.get("metadata", {})
+            text = chunk.get("text", "")
+
+            formatted_chunks.append({
+                "index": index,
+                "text_preview": text[:500],
+                "source": metadata.get("source", "desconocido"),
+                "page": metadata.get("page", "desconocida"),
+                "week": metadata.get("week", "desconocida"),
+                "section": metadata.get("section", ""),
+                "distance": chunk.get("distance")
+            })
+
+        return formatted_chunks
+
     def _remove_llm_sources(self, answer: str) -> str:
         """
         Elimina secciones de fuentes que el LLM pueda agregar aunque el prompt

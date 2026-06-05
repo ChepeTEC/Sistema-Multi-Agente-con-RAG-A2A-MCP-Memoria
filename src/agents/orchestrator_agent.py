@@ -4,6 +4,7 @@ from src.agents.web_search_agent import WebSearchAgent
 from src.config.settings import settings
 from src.llm.base import LLMClient
 from src.llm.gemini_client import GeminiClient
+from src.observability.langfuse_client import langfuse_tracer
 
 
 class OrchestratorAgent:
@@ -33,43 +34,128 @@ class OrchestratorAgent:
     def answer(self, question: str) -> dict:
         question = question.strip() if question else ""
 
-        if not question:
-            raise ValueError("La pregunta no puede estar vacia.")
+        trace = langfuse_tracer.create_trace(
+            name="orchestrator_request",
+            input_data={"question": question},
+            metadata={"agent": self.AGENT_NAME}
+        )
 
-        total_started_at = perf_counter()
-        decision_data = self._decide_agent(question)
-        agent_selected = decision_data["agent_selected"]
-        decision_reason = self._build_decision_reason(agent_selected)
+        try:
+            if not question:
+                langfuse_tracer.create_span(
+                    trace=trace,
+                    name="input_validation",
+                    input_data={"question": question},
+                    output_data={"valid": False, "error": "La pregunta no puede estar vacia."},
+                    metadata={"agent": self.AGENT_NAME}
+                )
+                raise ValueError("La pregunta no puede estar vacia.")
 
-        if agent_selected == "web":
-            agent_result = self.web_search_agent.answer(
-                question=question,
-                justification=decision_reason,
+            langfuse_tracer.create_span(
+                trace=trace,
+                name="input_validation",
+                input_data={"question": question},
+                output_data={"valid": True},
+                metadata={"agent": self.AGENT_NAME}
             )
-        else:
-            agent_result = self.rag_agent.answer(question)
 
-        total_duration_ms = round((perf_counter() - total_started_at) * 1000, 2)
+            total_started_at = perf_counter()
+            decision_data = self._decide_agent(question)
+            agent_selected = decision_data["agent_selected"]
+            decision_reason = self._build_decision_reason(agent_selected)
 
-        return {
-            "agent_selected": agent_selected,
-            "decision_reason": decision_reason,
-            "answer": agent_result.get("answer", ""),
-            "sources": agent_result.get("sources", []),
-            "trace": {
-                "question": question,
-                "orchestrator": self.AGENT_NAME,
+            langfuse_tracer.create_span(
+                trace=trace,
+                name="routing_decision",
+                input_data={
+                    "question": question,
+                    "valid_agents": sorted(self.VALID_AGENTS),
+                },
+                output_data={
+                    "agent_selected": agent_selected,
+                    "decision_reason": decision_reason,
+                    "raw_decision": decision_data["raw_decision"],
+                },
+                metadata={
+                    "agent": self.AGENT_NAME,
+                    "decision_model": decision_data["model"],
+                    "decision_provider": decision_data["provider"],
+                    "decision_response_id": decision_data["response_id"],
+                    "decision_duration_ms": decision_data["duration_ms"],
+                }
+            )
+
+            if agent_selected == "web":
+                delegated_agent_name = "WebSearchAgent"
+                agent_result = self.web_search_agent.answer(
+                    question=question,
+                    justification=decision_reason,
+                )
+            else:
+                delegated_agent_name = "RAGAgent"
+                agent_result = self.rag_agent.answer(question)
+
+            langfuse_tracer.create_span(
+                trace=trace,
+                name="agent_response",
+                input_data={
+                    "question": question,
+                    "delegated_agent": delegated_agent_name,
+                },
+                output_data={
+                    "answer_preview": agent_result.get("answer", "")[:1000],
+                    "sources_count": len(agent_result.get("sources", [])),
+                    "chunks_count": len(agent_result.get("chunks", [])),
+                },
+                metadata={
+                    "agent": self.AGENT_NAME,
+                    "delegated_agent": agent_result.get("agent", delegated_agent_name),
+                    "sources": agent_result.get("sources", []),
+                }
+            )
+
+            total_duration_ms = round((perf_counter() - total_started_at) * 1000, 2)
+
+            result = {
                 "agent_selected": agent_selected,
-                "decision_model": decision_data["model"],
-                "decision_provider": decision_data["provider"],
-                "decision_response_id": decision_data["response_id"],
-                "raw_decision": decision_data["raw_decision"],
-                "decision_duration_ms": decision_data["duration_ms"],
-                "total_duration_ms": total_duration_ms,
-                "delegated_agent": agent_result.get("agent"),
-                "delegated_trace": agent_result.get("trace", {}),
-            },
-        }
+                "decision_reason": decision_reason,
+                "answer": agent_result.get("answer", ""),
+                "sources": agent_result.get("sources", []),
+                "trace": {
+                    "question": question,
+                    "orchestrator": self.AGENT_NAME,
+                    "agent_selected": agent_selected,
+                    "decision_model": decision_data["model"],
+                    "decision_provider": decision_data["provider"],
+                    "decision_response_id": decision_data["response_id"],
+                    "raw_decision": decision_data["raw_decision"],
+                    "decision_duration_ms": decision_data["duration_ms"],
+                    "total_duration_ms": total_duration_ms,
+                    "delegated_agent": agent_result.get("agent"),
+                    "delegated_trace": agent_result.get("trace", {}),
+                },
+            }
+
+            langfuse_tracer.update_trace_output(trace, result)
+            return result
+
+        except Exception as exc:
+            langfuse_tracer.create_span(
+                trace=trace,
+                name="orchestrator_error",
+                input_data={"question": question},
+                output_data={"error": str(exc)},
+                metadata={"agent": self.AGENT_NAME}
+            )
+            langfuse_tracer.update_trace_output(
+                trace,
+                {"error": str(exc), "agent": self.AGENT_NAME}
+            )
+            raise
+
+        finally:
+            langfuse_tracer.close_trace(trace)
+            langfuse_tracer.flush()
 
     def _decide_agent(self, question: str) -> dict:
         decision_started_at = perf_counter()
