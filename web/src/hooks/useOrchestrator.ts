@@ -38,8 +38,40 @@ interface BackendChatResponse {
   trace: BackendTrace;
 }
 
+interface BackendErrorResponse {
+  error?: boolean;
+  component?: string;
+  message?: string;
+  detail?: string;
+}
+
 function getBackendUrl() {
   return import.meta.env.VITE_API_BACKEND_URL?.replace(/\/$/, "");
+}
+
+function formatBackendError(error: BackendErrorResponse) {
+  const message = error.message?.trim() || "El backend respondio con un error interno.";
+  const component = error.component?.trim();
+  const detail = error.detail?.trim();
+
+  return [
+    component ? `[${component}] ${message}` : message,
+    detail ? `Detalle: ${detail}` : "",
+  ].filter(Boolean).join("\n\n");
+}
+
+async function buildHttpError(response: Response) {
+  const contentType = response.headers.get("content-type") ?? "";
+
+  if (contentType.includes("application/json")) {
+    const data = (await response.json()) as BackendErrorResponse;
+
+    if (data.error || data.message) {
+      return new Error(formatBackendError(data));
+    }
+  }
+
+  return new Error(`Backend respondio con estado ${response.status}`);
 }
 
 function sourceToCitation(source: BackendSource, index: number): Citation {
@@ -145,7 +177,7 @@ export function useOrchestrator() {
         });
 
         if (!response.ok) {
-          throw new Error(`Backend respondio con estado ${response.status}`);
+          throw await buildHttpError(response);
         }
 
         const data = (await response.json()) as BackendChatResponse;
@@ -160,11 +192,13 @@ export function useOrchestrator() {
 
         appendMessage(assistantMsg);
       } catch (error) {
+        const message = error instanceof Error
+          ? error.message
+          : "No pude conectar con el backend real. Revisa que FastAPI este corriendo y que VITE_API_BACKEND_URL apunte al servidor correcto.";
         const assistantMsg: ChatMessage = {
           id: crypto.randomUUID(),
           role: "assistant",
-          content:
-            "No pude conectar con el backend real. Revisa que FastAPI este corriendo y que VITE_API_BACKEND_URL apunte al servidor correcto.",
+          content: message,
           createdAt: Date.now(),
           trace: {
             agent: "orchestrator",

@@ -68,6 +68,10 @@ class FakeWebSearchAgent:
         }
 
 
+def exploding_rag_factory():
+    raise RuntimeError("RAG no debio instanciarse")
+
+
 class OrchestratorAgentTests(unittest.TestCase):
     def test_routes_to_rag_when_gemini_selects_rag(self):
         rag_agent = FakeRAGAgent()
@@ -131,6 +135,78 @@ class OrchestratorAgentTests(unittest.TestCase):
         self.assertIn("internet", web_agent.calls[0]["justification"])
         self.assertEqual(result["trace"]["delegated_agent"], "WebSearchAgent")
         self.assertEqual(result["trace"]["delegated_trace"]["urls"], ["https://example.com"])
+
+    def test_web_route_does_not_instantiate_rag(self):
+        web_agent = FakeWebSearchAgent()
+        orchestrator = OrchestratorAgent(
+            web_search_agent=web_agent,
+            rag_agent_factory=exploding_rag_factory,
+            llm_client=FakeDecisionLLM("web"),
+        )
+
+        result = orchestrator.answer("Cuales son las noticias recientes de Gemini?")
+
+        self.assertEqual(result["agent_selected"], "web")
+        self.assertEqual(result["answer"], "Respuesta desde Web.")
+        self.assertEqual(web_agent.calls[0]["question"], "Cuales son las noticias recientes de Gemini?")
+
+    def test_can_route_to_web_even_if_rag_cannot_load(self):
+        web_agent = FakeWebSearchAgent()
+        orchestrator = OrchestratorAgent(
+            web_search_agent=web_agent,
+            rag_agent_factory=exploding_rag_factory,
+            llm_client=FakeDecisionLLM("web"),
+        )
+
+        result = orchestrator.answer("Busca en internet informacion actual sobre Gemini API.")
+
+        self.assertEqual(result["agent_selected"], "web")
+        self.assertEqual(result["trace"]["delegated_agent"], "WebSearchAgent")
+
+    def test_academic_questions_are_forced_to_rag_even_if_gemini_says_web(self):
+        questions = [
+            "Que es el descenso del gradiente?",
+            "Que problema presenta la funcion ReLU y como lo resuelve Leaky ReLU?",
+            "Que es una red neuronal artificial?",
+            "Que es una funcion de activacion?",
+            "Que es backpropagation?",
+        ]
+
+        for question in questions:
+            with self.subTest(question=question):
+                rag_agent = FakeRAGAgent()
+                orchestrator = OrchestratorAgent(
+                    rag_agent=rag_agent,
+                    web_search_agent=FakeWebSearchAgent(),
+                    llm_client=FakeDecisionLLM("web"),
+                )
+
+                result = orchestrator.answer(question)
+
+                self.assertEqual(result["agent_selected"], "rag")
+                self.assertEqual(rag_agent.questions, [question])
+
+    def test_explicit_current_or_web_questions_are_forced_to_web(self):
+        questions = [
+            "Cuales son las noticias recientes sobre Google Gemini?",
+            "Busca la documentacion oficial de Tavily.",
+            "Que cambios recientes ha anunciado OpenAI?",
+            "Busca en internet informacion actual sobre Gemini API.",
+        ]
+
+        for question in questions:
+            with self.subTest(question=question):
+                web_agent = FakeWebSearchAgent()
+                orchestrator = OrchestratorAgent(
+                    rag_agent=FakeRAGAgent(),
+                    web_search_agent=web_agent,
+                    llm_client=FakeDecisionLLM("rag"),
+                )
+
+                result = orchestrator.answer(question)
+
+                self.assertEqual(result["agent_selected"], "web")
+                self.assertEqual(web_agent.calls[0]["question"], question)
 
     def test_prefers_rag_when_gemini_returns_unexpected_output(self):
         rag_agent = FakeRAGAgent()

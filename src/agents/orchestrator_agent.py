@@ -1,4 +1,5 @@
 from time import perf_counter
+from collections.abc import Callable
 from src.agents.rag_agent import RAGAgent
 from src.agents.web_search_agent import WebSearchAgent
 from src.config.settings import settings
@@ -24,9 +25,13 @@ class OrchestratorAgent:
         rag_agent: RAGAgent | None = None,
         web_search_agent: WebSearchAgent | None = None,
         llm_client: LLMClient | None = None,
+        rag_agent_factory: Callable[[], RAGAgent] | None = None,
+        web_search_agent_factory: Callable[[], WebSearchAgent] | None = None,
     ):
-        self.rag_agent = rag_agent or RAGAgent()
-        self.web_search_agent = web_search_agent or WebSearchAgent()
+        self.rag_agent = rag_agent
+        self.web_search_agent = web_search_agent
+        self.rag_agent_factory = rag_agent_factory or RAGAgent
+        self.web_search_agent_factory = web_search_agent_factory or WebSearchAgent
         self.llm_client = llm_client or GeminiClient(
             model=settings.ORCHESTRATOR_LLM_MODEL
         )
@@ -87,13 +92,13 @@ class OrchestratorAgent:
 
             if agent_selected == "web":
                 delegated_agent_name = "WebSearchAgent"
-                agent_result = self.web_search_agent.answer(
+                agent_result = self._get_web_search_agent().answer(
                     question=question,
                     justification=decision_reason,
                 )
             else:
                 delegated_agent_name = "RAGAgent"
-                agent_result = self.rag_agent.answer(question)
+                agent_result = self._get_rag_agent().answer(question)
 
             langfuse_tracer.create_span(
                 trace=trace,
@@ -166,7 +171,7 @@ class OrchestratorAgent:
         measured_duration_ms = round((perf_counter() - decision_started_at) * 1000, 2)
 
         raw_decision = str(llm_result.get("text", "")).strip()
-        agent_selected = self._normalize_decision(raw_decision)
+        agent_selected = self._select_agent(question, raw_decision)
 
         return {
             "agent_selected": agent_selected,
@@ -182,10 +187,13 @@ class OrchestratorAgent:
         return (
             "Eres el clasificador de un sistema multi-agente academico. "
             "Debes decidir que agente debe responder la pregunta del usuario. "
-            "Si la pregunta puede responderse con apuntes o documentos del curso, "
-            "elige rag. Si requiere informacion externa, reciente o de internet, "
-            "elige web. Si existe duda, elige rag. Responde exclusivamente con "
-            "una palabra: rag o web."
+            "Elige rag para conceptos de IA, redes neuronales, funciones de "
+            "activacion, descenso del gradiente, backpropagation, transformers, "
+            "RAG, embeddings y cualquier tema que pueda responderse con apuntes "
+            "o documentos del curso. Elige web solo si el usuario pide de forma "
+            "explicita actualidad, noticias, internet, paginas web, documentacion "
+            "oficial actual o informacion reciente. Si existe duda, elige rag. "
+            "Responde exclusivamente con una palabra: rag o web."
         )
 
     @staticmethod
@@ -205,6 +213,67 @@ class OrchestratorAgent:
 
         # Defensive fallback required by the routing policy: when in doubt, use RAG.
         return "rag"
+
+    @classmethod
+    def _select_agent(cls, question: str, raw_decision: str) -> str:
+        question_lower = question.lower()
+
+        web_signals = [
+            "actual",
+            "actualidad",
+            "busca",
+            "buscar",
+            "documentacion oficial",
+            "esta semana",
+            "hoy",
+            "internet",
+            "noticia",
+            "noticias",
+            "reciente",
+            "recientes",
+            "web",
+        ]
+        academic_signals = [
+            "activacion",
+            "activación",
+            "backpropagation",
+            "descenso del gradiente",
+            "embedding",
+            "embeddings",
+            "funcion de activacion",
+            "función de activación",
+            "gradiente",
+            "leaky relu",
+            "rag",
+            "red neuronal",
+            "redes neuronales",
+            "relu",
+            "transformer",
+            "transformers",
+        ]
+
+        has_web_signal = any(signal in question_lower for signal in web_signals)
+        has_academic_signal = any(signal in question_lower for signal in academic_signals)
+
+        if has_web_signal:
+            return "web"
+
+        if has_academic_signal:
+            return "rag"
+
+        return cls._normalize_decision(raw_decision)
+
+    def _get_rag_agent(self) -> RAGAgent:
+        if self.rag_agent is None:
+            self.rag_agent = self.rag_agent_factory()
+
+        return self.rag_agent
+
+    def _get_web_search_agent(self) -> WebSearchAgent:
+        if self.web_search_agent is None:
+            self.web_search_agent = self.web_search_agent_factory()
+
+        return self.web_search_agent
 
     @staticmethod
     def _build_decision_reason(agent_selected: str) -> str:

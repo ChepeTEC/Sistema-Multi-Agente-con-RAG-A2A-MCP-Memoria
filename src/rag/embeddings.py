@@ -6,7 +6,14 @@ from sentence_transformers import SentenceTransformer
 
 class EmbeddingModel:
     def __init__(self, model_name: str):
-        self.model = SentenceTransformer(model_name)
+        try:
+            self.model = SentenceTransformer(model_name)
+        except Exception as exc:
+            raise RuntimeError(
+                "No se pudo cargar el modelo de embeddings "
+                f"'{model_name}'. Descargue/cachee el modelo de HuggingFace "
+                "antes de usar RAG o revise la conexion a internet."
+            ) from exc
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         return self.model.encode(
