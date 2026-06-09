@@ -6,6 +6,7 @@ import { useMcp } from "@/context/McpContext";
 import { buildMockAnswer, classifyIntent } from "@/mocks/fixtures";
 import { getRagCitations } from "@/mocks/sources";
 import type { ChatMessage } from "@/lib/types";
+import { useSearchMode } from "@/context/SearchModeContext";
 
 export function useMockOrchestrator() {
   const { active, appendMessage, renameIfFirst } = useSessions();
@@ -13,11 +14,14 @@ export function useMockOrchestrator() {
   const { role } = useUserRole();
   const { transactions, masked, logCall } = useMcp();
   const [isThinking, setIsThinking] = useState(false);
+  const { mode: searchMode } = useSearchMode();
 
   const send = useCallback(
     async (text: string) => {
       const content = text.trim();
       if (!content || isThinking) return;
+
+
 
       const userMsg: ChatMessage = {
         id: crypto.randomUUID(),
@@ -30,7 +34,7 @@ export function useMockOrchestrator() {
 
       setIsThinking(true);
 
-      const agent = classifyIntent(content);
+      const agent = classifyIntent(content, searchMode);
       const latency = 900 + Math.floor(Math.random() * 800);
       await new Promise((r) => setTimeout(r, latency));
 
@@ -68,6 +72,7 @@ export function useMockOrchestrator() {
           tools: result.tools,
           ragConfig: agent === "rag" ? config : undefined,
           role,
+          searchMode,
         },
         citations: agent === "rag" ? getRagCitations(config) : undefined,
       };
@@ -75,7 +80,7 @@ export function useMockOrchestrator() {
       appendMessage(assistantMsg);
       setIsThinking(false);
     },
-    [active.messages.length, appendMessage, config, isThinking, logCall, masked, renameIfFirst, role, transactions],
+    [active.messages.length, appendMessage, config, isThinking, logCall, masked, renameIfFirst, role, transactions, searchMode],
   );
 
   return { send, isThinking };

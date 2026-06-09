@@ -12,13 +12,18 @@ const ACADEMIC = ["gradiente", "apunte", "paper", "definici", "carlos", "neurona
 const WEB = ["últimas", "ultimas", "noticia", "hoy", "esta semana", "openai", "anthropic", "google", "reciente"];
 const MCP = ["cuenta", "transacci", "saldo", "sospechos", "bancari", "movimiento", "auditor"];
 
-export function classifyIntent(query: string): AgentKind {
+export function classifyIntent(query: string, mode: "web" | "docs" = "web"): AgentKind {
   const q = query.toLowerCase();
   if (MCP.some((k) => q.includes(k))) return "mcp";
+  if (mode === "docs") {
+    if (WEB.some((k) => q.includes(k)) || ACADEMIC.some((k) => q.includes(k))) return "rag";
+    return "summary";
+  }
   if (WEB.some((k) => q.includes(k))) return "web";
   if (ACADEMIC.some((k) => q.includes(k))) return "rag";
   return "summary";
 }
+
 
 export function buildMockAnswer(
   agent: AgentKind,

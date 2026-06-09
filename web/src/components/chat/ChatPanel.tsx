@@ -2,10 +2,12 @@ import { useState, type FormEvent } from "react";
 import { useSessions } from "@/context/SessionsContext";
 import { useOrchestrator } from "@/hooks/useOrchestrator";
 import { useAutoScroll } from "@/hooks/useAutoScroll";
+import { useSearchMode } from "@/context/SearchModeContext";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { MessageBubble } from "./MessageBubble";
 import { OrchestratorThinking } from "./OrchestratorThinking";
+import { SearchModeToggle } from "./SearchModeToggle";
 import { Send, Sparkles, Database, Globe, Lock } from "lucide-react";
 
 const SUGGESTIONS = [
@@ -17,6 +19,7 @@ const SUGGESTIONS = [
 export function ChatPanel() {
   const { active } = useSessions();
   const { send, isThinking } = useOrchestrator();
+  const { mode } = useSearchMode();
   const [input, setInput] = useState("");
   const scrollRef = useAutoScroll(active.messages.length + (isThinking ? 1 : 0));
 
@@ -32,17 +35,14 @@ export function ChatPanel() {
   return (
     <section className="flex h-full min-w-0 flex-1 flex-col bg-background bg-grid">
       {/* Header */}
-      <header className="flex items-center justify-between border-b border-border bg-background/70 px-6 py-3 backdrop-blur">
+      <header className="flex items-center justify-between gap-3 border-b border-border bg-background/70 px-6 py-3 backdrop-blur">
         <div className="min-w-0">
           <h1 className="truncate font-display text-base font-semibold">{active.title}</h1>
           <p className="text-[11px] text-muted-foreground">
             Orquestación multi-agente · RAG + Web Search + MCP
           </p>
         </div>
-        <div className="flex items-center gap-1.5 rounded-full border border-border bg-card/50 px-3 py-1 text-[11px] text-muted-foreground">
-          <span className="size-1.5 rounded-full bg-[color:var(--agent-summary)] shadow-[0_0_8px] shadow-[color:var(--agent-summary)]" />
-          Sistema operativo
-        </div>
+        <SearchModeToggle />
       </header>
 
       {/* Messages */}
@@ -86,8 +86,9 @@ export function ChatPanel() {
           </Button>
         </div>
         <p className="mx-auto mt-2 max-w-3xl text-center text-[11px] text-muted-foreground">
-          Las respuestas están simuladas en frontend. El Orquestador delegará al agente
-          correcto según la intención detectada.
+          {mode === "web"
+            ? "Búsqueda en la web habilitada · el Orquestador puede delegar en Web Search, RAG o MCP."
+            : "Búsqueda limitada al corpus de apuntes · las consultas informativas se resuelven con RAG."}
         </p>
       </form>
     </section>

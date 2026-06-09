@@ -25,6 +25,7 @@ export interface ExecutionTrace {
   tools: ToolCall[];
   ragConfig?: RagConfig;
   role: UserRole;
+  searchMode: "web" | "docs";
   decisionReason?: string;
   backendTrace?: Record<string, unknown>;
 }
