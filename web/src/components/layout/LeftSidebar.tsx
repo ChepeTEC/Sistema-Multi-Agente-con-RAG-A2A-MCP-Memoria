@@ -15,7 +15,6 @@ export function LeftSidebar() {
         </div>
       </div>
 
-      <UserProfileCard />
 
       <div className="min-h-0 flex-1">
         <SessionList />

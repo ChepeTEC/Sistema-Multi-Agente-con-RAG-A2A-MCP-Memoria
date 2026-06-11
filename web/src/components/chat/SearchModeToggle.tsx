@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { Globe, BookOpen } from "lucide-react";
 
 const OPTIONS: { id: SearchMode; label: string; icon: typeof Globe }[] = [
-  { id: "web", label: "Web", icon: Globe },
+  { id: "web", label: "Solo Web", icon: Globe },
   { id: "docs", label: "Solo Apuntes", icon: BookOpen },
 ];
 
