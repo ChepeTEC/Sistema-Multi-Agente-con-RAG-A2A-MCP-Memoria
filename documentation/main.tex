@@ -24,7 +24,7 @@ Instituto Tecnológico de Costa Rica}
 \maketitle
 
 \begin{abstract}
-El presente informe describe la arquitectura de un sistema multiagente para responder las consultas sobre apuntes del curso de Inteligencia Artificial y coordinar las fuentes de información internas y externas. La solución contempla a un orquestador central, recuperación aumentada por generación (RAG), búsqueda web, memoria conversacional, consulta transaccional mediante MCP, síntesis de información y observabilidad. Mediante el diseño implementado se separa decisión, recuperación, generación y trazabilidad para seleccionar asi el flujo adecuado según la pregunta realizada.
+El presente informe describe la arquitectura de un sistema multiagente para responder las consultas sobre apuntes del curso de Inteligencia Artificial y coordinar las fuentes de información internas y externas. La solución incluye a un orquestador central, recuperación aumentada por generación (RAG), búsqueda web, memoria conversacional, consulta transaccional mediante MCP, síntesis de información y observabilidad. El diseño implementado se separa decisión, recuperación, generación y trazabilidad para seleccionar asi el flujo adecuado según la pregunta realizada.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -33,13 +33,13 @@ sistemas multiagente, RAG, orquestación, búsqueda web, MCP, memoria conversaci
 
 \section{Introducción}
 
-El sistema propuesto resuelve el problema de responder preguntas tanto académicas como operativas mediante la arquitectura multiagente capaz de seleccionar distintas fuentes de información según la intención del usuario. La solución combina agentes especializados, herramientas externas y un orquestador central que decide si una consulta debe resolverse con documentos del curso, búsqueda web, memoria conversacional, síntesis o acceso transaccional controlado \cite{wooldridge1995intelligent,shoham2008multiagent}.
+El sistema propuesto resuelve el problema de responder preguntas tanto académicas como operativas mediante la arquitectura multiagente capaz de seleccionar distintas fuentes de información según se presente la necesidad a partir de lo que solicita el usurio. La solución combina agentes especializados, herramientas externas y un orquestador central que decide si una consulta debe resolverse con documentos del curso, búsqueda web, memoria conversacional, síntesis o acceso transaccional controlado \cite{wooldridge1995intelligent,shoham2008multiagent}.
 
 El componente documental se apoya en Retrieval-Augmented Generation (RAG), lo que permite generar respuestas basadas en los apuntes del curso y no únicamente en el conocimiento del modelo \cite{lewis2020rag}. De forma complementaria, la arquitectura contempla búsqueda web para información externa o reciente, memoria temporal e histórica para continuidad conversacional, un agente resumidor para condensar información y un agente transaccional conectado a un servidor MCP para consultar datos ficticios bajo reglas de seguridad.
 
-\section{Arquitectura General del Sistema}
+\section{Arquitectura del Sistema}
 
-La arquitectura se organiza en cinco niveles principales: la interfaz de usuario, capa de comunicación, orquestador, agentes especializados y herramientas de soporte. La interfaz recibe la consulta y presenta la respuesta final. La capa de comunicación expone el flujo conversacional hacia el backend. El orquestador analiza la consulta y coordina el agente correspondiente.
+La arquitectura se organiza en cinco niveles principales: la interfaz de usuario, capa de comunicación, orquestador, agentes especializados y herramientas de soporte. La interfaz recibe la consulta y presenta la respuesta final. La capa de comunicación expone el flujo conversacional hacia el backend. El orquestador analiza la consulta y coordina el agente correspondiente y el más optimo para la tarea.
 
 Los agentes se encargan de cubrir distintos tipos de consulta. El agente RAG atiende preguntas sobre los apuntes del curso; el agente de búsqueda web recupera fuentes externas; el agente de memoria gestiona contexto temporal e histórico; el agente resumidor sintetiza información; y el agente transaccional interactúa con herramientas MCP para consultar los datos ficticios.
 
@@ -61,18 +61,16 @@ La Fig.~\ref{fig:arquitectura-general} muestra la vista general del sistema. El 
     \label{fig:arquitectura-orquestador}
 \end{figure}
 
-El orquestador recibe una consulta en lenguaje natural y determina qué flujo debe ejecutarse. Para ello, evalúa si la pregunta requiere algun conocimiento documental, información externa, memoria conversacional, síntesis o consulta transaccional. Esta decisión evita que la interfaz o los agentes especializados asuman responsabilidades de coordinación.
+El orquestador recibe una consulta y  determina qué flujo debe ejecutarse. Para ello, evalúa si la pregunta requiere algun conocimiento documental, información externa, memoria conversacional, síntesis o consulta transaccional. Esta decisión evita que la interfaz o los agentes especializados asuman responsabilidades de coordinación, separando correctamente las funciones específicas de cada agente.
 
-Cuando la pregunta se relaciona con los conceptos, definiciones o explicaciones que se encuentran en los apuntes, el orquestador dirige el flujo hacia RAG. Cuando solicita información reciente o externa, activa búsqueda web. Si depende del historial, se considera memoria; si requiere condensar información, se activa síntesis; y si involucra datos ficticios transaccionales, se dirige hacia el flujo MCP bajo restricciones de seguridad.
-
-Ante consultas ambiguas, el diseño prioriza el uso de conocimiento interno mediante RAG. Mediante esta política se reduce el uso innecesario de fuentes externas y favorece respuestas fundamentadas en los documentos del curso.
+Cuando la pregunta se relaciona con los conceptos, definiciones o explicaciones que se encuentran en los apuntes, el orquestador dirige el flujo hacia RAG. Cuando solicita información reciente o externa, activa búsqueda web. Si depende del historial, se considera memoria; si requiere condensar información, se activa síntesis; y si involucra datos ficticios transaccionales, se dirige hacia el flujo MCP bajo restricciones de seguridad. No obstante estos últimos elementos son implementados hasta el final.
 
 \section{Flujo de Procesamiento de Consultas}
 
 \subsection{Consultas Documentales Mediante RAG}
 
 \textbf{Preprocesamiento de documentos}
-Para construir la base documental del sistema RAG, se utilizaron los apuntes del curso en formato PDF como fuente principal de información. Estos documentos fueron procesados antes de ser almacenados en la base vectorial, con el objetivo de convertir su contenido en fragmentos consultables por el agente RAG. Este enfoque sigue la idea general de la generación aumentada por recuperación, donde un modelo generativo utiliza información recuperada desde una memoria externa o índice documental para producir respuestas más fundamentadas \cite{lewis2020rag}.
+Para construir la base documental del sistema RAG, se utilizaron los apuntes del curso en formato PDF como fuente principal de información. Estos documentos fueron procesados antes de ser almacenados en la base vectorial, con el objetivo de convertir su contenido en fragmentos consultables (chunks) por el agente RAG. Este enfoque sigue la idea general de la generación aumentada por recuperación, donde un modelo generativo utiliza información recuperada desde una memoria externa o índice documental para producir respuestas más fundamentadas \cite{lewis2020rag}.
 
 El proceso inicia con la extracción del texto de cada PDF ubicado en el directorio de apuntes del proyecto. Luego, el contenido extraído pasa por una etapa de limpieza básica, donde se eliminan espacios innecesarios, saltos de línea redundantes y caracteres que pueden afectar la calidad del texto recuperado. Esta etapa es importante porque los documentos PDF pueden contener texto con cortes, errores de codificación o irregularidades generadas durante la extracción.
 
@@ -80,10 +78,6 @@ Después, el texto se divide en fragmentos o \textit{chunks}. Para esta primera 
 
 Cada fragmento se almacena junto con metadatos pertenecientes al documento original. Entre estos metadatos se incluyen el nombre del archivo, la página, la semana del curso, la sección detectada y otros datos útiles solicitados para rastrear la fuente de la información. Esto permite que, cuando el sistema recupera un fragmento, también pueda mostrar al usuario de dónde proviene la información utilizada para generar la respuesta.
 
-Finalmente, los fragmentos procesados se convierten en vectores mediante un modelo de \textit{embeddings}. Este tipo de representación permite comparar textos por similitud semántica, en lugar de depender únicamente de coincidencias exactas de palabras \cite{reimers2019sentencebert}. Los vectores generados se almacenan en una base vectorial ChromaDB, la cual permite realizar búsquedas de fragmentos relevantes según la consulta del usuario. De esta forma, el agente RAG puede recuperar los fragmentos que presentan mayor similitud semántica con la pregunta planteada.
-
-\textbf{Flujo de las consulta mediante RAG}
-Cuando la consulta se relaciona con los apuntes del curso, el orquestador dirige la solicitud hacia el agente RAG. Este flujo puede resumirse de la siguiente manera:
 
 \begin{center}
 \texttt{Usuario $\rightarrow$ Orquestador $\rightarrow$ RAGAgent $\rightarrow$ Embeddings $\rightarrow$ ChromaDB $\rightarrow$ Chunks relevantes $\rightarrow$ LLM $\rightarrow$ Respuesta con fuentes}
@@ -96,7 +90,6 @@ Una vez recuperados los fragmentos relevantes, el sistema construye un \textit{p
 En pocas palabras, flujo permite que el sistema primero busque información relevante en los apuntes y luego use esa información para generar la respuesta. De esta forma, el modelo no responde únicamente con su conocimiento interno, sino que se apoya en fragmentos recuperados desde los documentos del curso \cite{lewis2020rag}. Además, el uso de \textit{embeddings} permite encontrar fragmentos relacionados con la pregunta aunque no tengan exactamente las mismas palabras escritas por el usuario, sino que sea seleccionado por la similitud semántica. \cite{reimers2019sentencebert}.
 
 
-
 \subsection{Consultas Externas Mediante Web Search}
 
 Las consultas externas se atienden cuando la pregunta requiere información reciente, externa o solicitada explícitamente desde la web:
@@ -105,11 +98,17 @@ Las consultas externas se atienden cuando la pregunta requiere información reci
 \texttt{Usuario $\rightarrow$ Orquestador $\rightarrow$ Web Search $\rightarrow$ Tavily $\rightarrow$ LLM $\rightarrow$ Respuesta}
 \end{center}
 
- Para el uso de búsqueda web se requiere una justificación generada por el proceso de orquestación, mediente esta condición se evita activar fuentes externas como mecanismo default y permite mantener control sobre cuándo el sistema va a abandonar la base documental.
+Para el uso de búsqueda web se requiere una justificación generada por el proceso de orquestación, mediente esta condición se evita activar fuentes externas como mecanismo default y permite mantener control sobre cuándo el sistema va a abandonar la base documental.
 
 Los resultados recuperados se normalizan y se entregan como contexto al modelo de lenguaje. La respuesta debe basarse en las fuentes obtenidas, reduciendo el riesgo de introducir información la cual no es respaldada.
 
-\section{Decisiones Arquitectónicas e Integración Tecnológica}
+\subsection{Observabilidad mediante Langfuse Cloud}
+
+La observabilidad del sistema se implementó con Langfuse Cloud para poder revisar qué ocurre internamente cuando el usuario realiza una consulta. En el caso del flujo principal de orquestación y RAG, se registra la pregunta del usuario, la decisión tomada por el orquestador, el agente seleccionado, la herramienta utilizada, los fragmentos recuperados desde ChromaDB, la llamada al modelo de lenguaje, la respuesta generada y la latencia del proceso.
+
+Para las consultas documentales, el \textit{RAGAgent} utiliza \textit{RAGTool} y ChromaDB para buscar información relacionada con la pregunta dentro de los apuntes del curso. La traza guarda los fragmentos recuperados junto con datos como el archivo, la página, la semana, la sección y la distancia de similitud. Después de eso, también se registra la llamada al modelo Gemini, donde se envía la pregunta junto con el contexto recuperado para generar la respuesta final. Aunque se mencionò anteriormente, algunos de los datos crudos que se pueden observar mediante Langfuse son: Entrada del usuario, Agente que recibió la solicitud, Herramientas utilizadas, Fragmentos recuperados por el RAG, Llamadas al modelo de lenguaje, Latencia, Errores.
+
+\section{Presente y futuras decisiones Arquitectónicas e Integración Tecnológica}
 
 El diseño usa un orquestador central para concentrar la decisión del flujo y asi mantener los agentes especializados con sus responsabilidades delimitadas. Esta estructura permite integrar agentes documentales, externos, conversacionales, de síntesis y transaccionales bajo el mismo esquema de coordinación.
 
@@ -117,13 +116,34 @@ La arquitectura separa la recuperación y generación. En RAG, primero se recupe
 
 Gemini se integra para apoyar clasificación y generación de respuestas \cite{geminiapi}. Tavily se utiliza para búsqueda externa orientada a aplicaciones con agentes \cite{tavilydocs}. ChromaDB funciona como infraestructura vectorial para consultar representaciones semánticas de documentos \cite{chromadocs}. FastAPI actúa como capa de comunicación entre interfaz y backend \cite{fastapidocs}. Langfuse permite registrar trazas, decisiones, llamadas a herramientas y errores dentro del flujo \cite{langfusedocs}.
 
-Esta arquitectura reduce el acoplamiento entre componentes y permite coordinar distintos tipos de consulta sin modificar la estructura general del sistema.
+\subsection{Incorporación de componentes para la segunda entrega}
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.48\textwidth]{figures/DiagramaArquitecturaSeguraMCP.png}
+\caption{Diagrama de arquitectura segura utilizando un MCP Server.}
+\label{fig:arquitectura-segura-mcp}
+\end{figure}
+
+Actualmente, el grupo también se encuentra trabajando en el agente resumidor, el servidor MCP y la base de datos que será utilizada para almacenar información persistente del sistema. El agente resumidor se utilizará para condensar información extensa que venga de documentos, resultados web o historial conversacional. Su función será generar respuestas más cortas y organizadas cuando el sistema obtenga mucho contexto o cuando el usuario solicite un resumen directamente.
+
+Tomando en cuenta la Fig.\ref{fig:arquitectura-segura-mcp}, el agente transaccional se incorporará mediante un servidor MCP, el cual permitirá consultar datos ficticios o controlados de forma segura. Este componente se manejará bajo reglas específicas, de manera que el sistema pueda acceder a herramientas externas sin exponer operaciones no autorizadas.
+
+La base de datos transaccional será realizada en PostgreSQL, la cual se implementará utilizando la imagen de dicho motor de base de datos en Docker en un contenedor aislado. Esta base de datos será llenada utilizando un script de Python; generando el volumen de datos ficticios necesarios para las pruebas requeridas para el sistema.
+
+El servidor MCP se desarrollará en Python utilizando el SDK desarrollado por Anthropic, el cual se encargará de ser un servicio intermediario, exponiendo herramientas de lectura de datos mediante la ejecución exclusica de procedimientos almacenados en la base de datos. Además, mencionar que bajo ninguna circunstancia el agente tendrá permisos para ejecutar código SQL dinámico o libre.
+
+Seguidamente, el MCP obtiene los datos crudos desde la base de datos, luego aplicará políticas de seguridad en tiempo de ejecución para anonimizar los datos sensibles y enmascarar información crítica. Solamente después de aplicar este filtro a los datos, el MCP estructurará los datos en formato JSON y los va a retornar al agente transaccional que realizó la petición, garantizando así el principio de mínimo privilegio y seguridad por diseño.
+
+Finalmente, la memoria histórica persistente se apoyará en una base de datos para conservar información relevante de interacciones anteriores. Esto ayudará a que el sistema pueda mantener continuidad entre consultas y responder de forma más contextualizada cuando el usuario haga referencia a información mencionada previamente.
 
 \section{Conclusiones}
 
 El uso de una arquitectura multiagente permite que se puedan abordar distintos tipos de consultas mediante sus respectivos agentes, evitando depender de una única fuente de información o de un único flujo de procesamiento. La incorporación de un orquestador facilita la selección dinámica de herramientas y agentes, permitiendo adaptar el comportamiento del sistema según la intención del usuario.
 
 Asimismo, la integración de recuperación documental, búsqueda web, memoria conversacional y acceso controlado a servicios externos proporciona una base bastante flexible para construir respuestas más contextualizadas. Este enfoque favorece la incorporación de nuevas capacidades sin modificar significativamente la estructura general de la solución.
+
+Por otro lado, la delegación del acceso a la base de datos transaccional a través de un servidor MCP garantiza el cumplimiento del principio de mínimo privilegio. La aplicación de técnicas de enmascaramiento y anonimización en esta capa intermedia previene eficazmente la exposición de datos sensibles al modelo de lenguaje, consolidando un diseño completamente seguro y protegiendo la privacidad de la información.
 
 Finalmente, la arquitectura propuesta demuestra la utilidad de combinar modelos de lenguaje con herramientas especializadas y mecanismos de trazabilidad, permitiendo construir sistemas más controlables, auditables y adecuados para escenarios en los cuales la procedencia de la información y la transparencia del proceso de obtencion de respuesta son aspectos relevantes.
 
