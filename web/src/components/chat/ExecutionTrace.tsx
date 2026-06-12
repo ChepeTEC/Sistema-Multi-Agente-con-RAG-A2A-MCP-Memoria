@@ -73,9 +73,9 @@ export function ExecutionTraceView({ trace }: { trace: ExecutionTrace }) {
             </div>
           )}
 
-          <div className="text-[10px] text-muted-foreground">
+          {/* <div className="text-[10px] text-muted-foreground">
             rol auditado: <span className="text-foreground">{trace.role}</span>
-          </div>
+          </div> */}
         </AccordionContent>
       </AccordionItem>
     </Accordion>
