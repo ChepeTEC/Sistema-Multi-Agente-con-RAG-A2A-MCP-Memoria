@@ -10,10 +10,16 @@ import { OrchestratorThinking } from "./OrchestratorThinking";
 import { SearchModeToggle } from "./SearchModeToggle";
 import { Send, Sparkles, Database, Globe, Lock } from "lucide-react";
 
-const SUGGESTIONS = [
-  { icon: Database, label: "¿Qué es el descenso del gradiente según los apuntes de Carlos?" },
-  { icon: Globe,    label: "¿Cuáles son las últimas noticias de OpenAI de esta semana?" },
-  { icon: Lock,     label: "Verificar transacciones sospechosas de la cuenta 1234" },
+const SUGGESTIONS_WEB = [
+  { icon: Database, label: "¿Cuáles son las noticias más recientes sobre Google Gemini?" },
+  { icon: Globe,    label: "Busca la documentación oficial de Tavily y dime para qué sirve." },
+  { icon: Lock,     label: "Cuál es el primer partido del mundial de futbol del 2026" },
+];
+
+const SUGGESTIONS_DOCS = [
+  { icon: Database, label: "¿Qué es el descenso del gradiente y cuál es su objetivo durante el entrenamiento de un modelo?" },
+  { icon: Database, label: "¿Qué problema presenta la función ReLU y cómo lo resuelve Leaky ReLU?" },
+  { icon: Database, label: "¿Qué es una función de activación dentro de una red neuronal?" },
 ];
 
 export function ChatPanel() {
@@ -31,6 +37,7 @@ export function ChatPanel() {
   };
 
   const isEmpty = active.messages.length === 0;
+
 
   return (
     <section className="flex h-full min-w-0 flex-1 flex-col bg-background bg-grid">
@@ -108,7 +115,7 @@ export function ChatPanel() {
           especializado y mostrará las trazas, fuentes y auditoría.
         </p>
         <div className="mt-6 grid w-full max-w-2xl gap-2 sm:grid-cols-3">
-          {SUGGESTIONS.map((s, i) => {
+          {(mode === "web" ? SUGGESTIONS_WEB : SUGGESTIONS_DOCS).map((s, i) => {
             const Icon = s.icon;
             return (
               <button
