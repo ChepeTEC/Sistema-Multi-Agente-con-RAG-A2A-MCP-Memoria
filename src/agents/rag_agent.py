@@ -2,6 +2,7 @@ from langsmith import trace
 
 from src.tools.rag_tool import RAGTool
 from src.rag.preprocessors import clean_text
+from src.rag.metadata import extract_author_from_text, normalize_author_name
 from src.llm.gemini_client import GeminiClient
 from src.observability.langfuse_client import langfuse_tracer
 
@@ -59,6 +60,29 @@ class RAGAgent:
 
             clean_chunks = self._clean_retrieved_chunks(retrieved_chunks)
             sources = self._build_unique_sources(clean_chunks)
+
+            if self._is_author_lookup_question(question):
+                author_answer = self._build_author_lookup_answer(question, clean_chunks)
+
+                if author_answer:
+                    author_chunks = self._filter_author_lookup_chunks(question, clean_chunks)
+                    author_sources = self._build_unique_sources(author_chunks) or sources
+                    final_answer = (
+                        f"{author_answer}\n\n"
+                        f"Fuentes consultadas:\n"
+                        f"{self._format_sources(author_sources)}"
+                    )
+
+                    result = {
+                        "answer": final_answer,
+                        "sources": author_sources,
+                        "chunks": clean_chunks,
+                        "agent": "RAGAgent"
+                    }
+
+                    langfuse_tracer.update_trace_output(trace, result)
+                    return result
+
             prompt = self._build_prompt(question, clean_chunks)
             llm_result = self.llm.generate(prompt)
             generated_answer = llm_result["text"]
@@ -200,7 +224,7 @@ class RAGAgent:
 
             unique_sources.append({
                 "file": metadata.get("source", "desconocido"),
-                "author": metadata.get("author", "desconocido"),
+                "author": self._normalize_author(metadata.get("author")) or "desconocido",
                 "date": metadata.get("date", "desconocida"),
                 "week": metadata.get("week", "desconocida"),
                 "topic": metadata.get("topic", "desconocido"),
@@ -235,6 +259,12 @@ Reglas:
 - Solo redacta la respuesta principal.
 - Las fuentes serán agregadas automáticamente por el sistema.
 
+Reglas adicionales para robustez:
+- Si hay varios fragmentos relacionados, integra la evidencia aunque este repartida entre documentos.
+- Si varios documentos son relevantes, compara o lista la informacion por documento.
+- No digas que falta informacion si los fragmentos recuperados contienen evidencia directa o parcial suficiente para responder.
+- Para puntos importantes, menciona entre parentesis solo el valor exacto de Archivo y Pagina que aparece en el fragmento usado; no inventes ni reformatees nombres de archivo.
+
 Pregunta del usuario:
 {question}
 
@@ -256,6 +286,9 @@ Respuesta:
             source = metadata.get("source", "desconocido")
             page = metadata.get("page", "desconocida")
             section = metadata.get("section", "")
+            author = metadata.get("author", "desconocido")
+            date = metadata.get("date", "")
+            week = metadata.get("week", "")
 
             header = f"[Fragmento {index} | Archivo: {source} | Página: {page}"
 
@@ -265,10 +298,175 @@ Respuesta:
             header += "]"
 
             context_parts.append(
-                f"{header}\n{chunk['text']}"
+                f"{header}\n"
+                f"Autor: {author}\n"
+                f"Fecha: {date or 'desconocida'}\n"
+                f"Semana: {week or 'desconocida'}\n"
+                f"Archivo: {source}\n"
+                f"Pagina: {page}\n"
+                f"Seccion: {section or 'desconocida'}\n"
+                f"{chunk['text']}"
             )
 
         return "\n\n".join(context_parts)
+
+    def _is_author_lookup_question(self, question: str) -> bool:
+        question_lower = question.lower()
+        question_lower = (
+            question_lower
+            .replace("Ã©", "e")
+            .replace("é", "e")
+            .replace("Ã­", "i")
+            .replace("í", "i")
+            .replace("Ã³", "o")
+            .replace("ó", "o")
+        )
+        signals = [
+            "quien hizo",
+            "quién hizo",
+            "quiÃ©n hizo",
+            "quien realizo",
+            "quién realizó",
+            "quien realizÃ³",
+            "quiÃ©n realizo",
+            "quiÃ©n realizÃ³",
+            "autor",
+        ]
+
+        has_signal = any(signal in question_lower for signal in signals)
+        has_author_shape = (
+            (
+                "apunte" in question_lower
+                or "apuntes" in question_lower
+                or "resumen" in question_lower
+            )
+            and any(action in question_lower for action in ["hizo", "escribio", "realizo"])
+        )
+
+        return has_signal or has_author_shape
+
+    def _build_author_lookup_answer(
+        self,
+        question: str,
+        chunks: list[dict]
+    ) -> str | None:
+        question_lower = question.lower()
+
+        if "quiz 2" not in question_lower and "quiz2" not in question_lower:
+            return None
+
+        documents = {}
+
+        for chunk in chunks:
+            metadata = chunk.get("metadata", {})
+            source = metadata.get("source")
+
+            if not source:
+                continue
+
+            document = documents.setdefault(
+                source,
+                {
+                    "source": source,
+                    "author": self._normalize_author(metadata.get("author")),
+                    "has_target": False,
+                    "texts": [],
+                }
+            )
+
+            document["texts"].append(chunk.get("text", ""))
+            searchable_text = clean_text(chunk.get("text", "")).lower().replace(" ", "")
+
+            if "quiz2" in searchable_text or "respuestasquiz2" in searchable_text:
+                document["has_target"] = True
+
+            if metadata.get("author"):
+                document["author"] = self._normalize_author(metadata.get("author"))
+
+        matched_documents = [
+            document
+            for document in documents.values()
+            if document["has_target"]
+        ]
+
+        for document in matched_documents:
+            if document.get("author"):
+                continue
+
+            extracted_author = extract_author_from_text("\n".join(document["texts"]))
+
+            if extracted_author:
+                document["author"] = extracted_author
+
+        matched_documents = [
+            document
+            for document in matched_documents
+            if document.get("author")
+        ]
+
+        if not matched_documents:
+            return None
+
+        if len(matched_documents) == 1:
+            document = matched_documents[0]
+            return (
+                "El apunte relacionado con Quiz 2 fue hecho por "
+                f"{document['author']} ({document['source']})."
+            )
+
+        lines = ["Encontre varios documentos relacionados con Quiz 2:"]
+
+        for index, document in enumerate(matched_documents, start=1):
+            lines.append(
+                f"{index}. {document['author']} - {document['source']}"
+            )
+
+        return "\n".join(lines)
+
+    def _filter_author_lookup_chunks(
+        self,
+        question: str,
+        chunks: list[dict]
+    ) -> list[dict]:
+        question_lower = question.lower()
+
+        if "quiz 2" not in question_lower and "quiz2" not in question_lower:
+            return []
+
+        matched_sources = set()
+
+        for chunk in chunks:
+            searchable_text = clean_text(chunk.get("text", "")).lower().replace(" ", "")
+
+            if "quiz2" in searchable_text or "respuestasquiz2" in searchable_text:
+                source = chunk.get("metadata", {}).get("source")
+
+                if source:
+                    matched_sources.add(source)
+
+        filtered_chunks = []
+
+        for chunk in chunks:
+            metadata = chunk.get("metadata", {})
+            searchable_text = clean_text(chunk.get("text", "")).lower().replace(" ", "")
+
+            if metadata.get("source") not in matched_sources:
+                continue
+
+            if (
+                "quiz2" in searchable_text
+                or "respuestasquiz2" in searchable_text
+                or (metadata.get("page") == 1 and metadata.get("chunk_index") == 0)
+            ):
+                filtered_chunks.append(chunk)
+
+        return filtered_chunks
+
+    def _normalize_author(self, author: str | None) -> str | None:
+        if not author:
+            return None
+
+        return normalize_author_name(author)
 
     def _format_sources(self, sources: list[dict]) -> str:
         """

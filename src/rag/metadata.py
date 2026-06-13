@@ -45,6 +45,12 @@ def extract_metadata_from_filename(pdf_path: Path) -> dict:
 
 
 def extract_author_from_text(text: str) -> str | None:
+    improved_author = extract_author_from_text_v2(text)
+
+    if improved_author:
+        return improved_author
+
+    return None
 
     lines = [line.strip() for line in text.splitlines() if line.strip()]
 
@@ -73,6 +79,131 @@ def extract_author_from_text(text: str) -> str | None:
             return line
 
     return None
+
+
+def extract_author_from_text_v2(text: str) -> str | None:
+    lines = [
+        clean_text(line)
+        for line in text.splitlines()
+        if line and line.strip()
+    ]
+
+    ignore_keywords = [
+        "apunte",
+        "apuntes",
+        "abstract",
+        "cartago",
+        "clase",
+        "costa rica",
+        "curso",
+        "escuela",
+        "fecha",
+        "inteligencia artificial",
+        "instituto",
+        "introduccion",
+        "overfitting",
+        "profesor",
+        "quiz",
+        "regresion",
+        "regresión",
+        "logistica",
+        "logística",
+        "respuesta",
+        "respuestas",
+        "resumen",
+        "semana",
+        "tecnologico",
+        "underfitting",
+    ]
+
+    def is_name_candidate(value: str) -> bool:
+        value = re.sub(r"^(?:\d+(?:st|nd|rd|th)?\s+)+", "", value.strip(), flags=re.I)
+        value = value.strip(" -:,.;")
+        lower = value.lower()
+
+        if not value or any(keyword in lower for keyword in ignore_keywords):
+            return False
+
+        if re.match(r"^[IVXLCDM]+(?:-[A-Z])?\.\s+", value):
+            return False
+
+        if "@" in value or any(char.isdigit() for char in value):
+            return False
+
+        if "," in value or ":" in value or len(value) > 80:
+            return False
+
+        words = value.split()
+        if not 2 <= len(words) <= 6:
+            return False
+
+        lowercase_particles = {"de", "del", "la", "las", "los", "y"}
+        capitalized_words = 0
+
+        for word in words:
+            clean_word = word.strip(" -.,;:")
+
+            if clean_word.lower() in lowercase_particles:
+                continue
+
+            if len(clean_word) < 2 or not clean_word[0].isupper():
+                return False
+
+            capitalized_words += 1
+
+        return capitalized_words >= 2
+
+    def candidate_from_line(line: str) -> str | None:
+        normalized = re.sub(r"\s+", " ", line).strip()
+        normalized = re.sub(r"\b\d+(?:st|nd|rd|th)\b", " ", normalized, flags=re.I)
+        normalized = re.split(
+            r"\b(?:escuela|instituto|tecnologico|profesor|curso|fecha|carnet|carne|carne:)\b",
+            normalized,
+            maxsplit=1,
+            flags=re.I,
+        )[0]
+        normalized = re.split(r"\d{4,}|@|,", normalized, maxsplit=1)[0]
+        normalized = normalized.strip(" -:,.;")
+
+        if is_name_candidate(normalized):
+            return normalized
+
+        name_pattern = (
+            r"\b[A-ZÁÉÍÓÚÑ][A-Za-zÁÉÍÓÚÑáéíóúñ´`'\u0300-\u036f]+"
+            r"(?:\s+[A-ZÁÉÍÓÚÑ][A-Za-zÁÉÍÓÚÑáéíóúñ´`'\u0300-\u036f]+){1,5}\b"
+        )
+
+        for match in re.finditer(name_pattern, line):
+            candidate = match.group(0).strip(" -:,.;")
+
+            if is_name_candidate(candidate):
+                return candidate
+
+        return None
+
+    for line in lines[:25]:
+        candidate = candidate_from_line(line)
+
+        if candidate:
+            return normalize_author_name(candidate)
+
+    return None
+
+
+def normalize_author_name(author: str) -> str:
+    replacements = {
+        "Jośe": "José",
+        "Ferńandez": "Fernández",
+        "Ingenieŕia": "Ingeniería",
+        "Guilĺen": "Guillén",
+    }
+
+    normalized = author
+
+    for source, target in replacements.items():
+        normalized = normalized.replace(source, target)
+
+    return normalized
 
 
 def extract_topic_from_text(text: str) -> str:

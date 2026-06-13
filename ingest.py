@@ -43,6 +43,9 @@ def main():
         collection_name=settings.COLLECTION_NAME
     )
 
+    print("Recreando coleccion vectorial...")
+    vector_store.reset_collection()
+
     vector_store.add_chunks(chunks, embeddings)
 
     print("Ingesta completada correctamente.")

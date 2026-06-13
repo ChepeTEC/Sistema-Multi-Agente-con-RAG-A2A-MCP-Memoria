@@ -67,6 +67,13 @@ class ChromaVectorStore:
             metadatas=metadatas
         )
 
+    def reset_collection(self) -> None:
+        collection_name = self.collection.name
+        self.client.delete_collection(name=collection_name)
+        self.collection = self.client.get_or_create_collection(
+            name=collection_name
+        )
+
     def search(
         self,
         query_embedding: list[float],
@@ -76,3 +83,21 @@ class ChromaVectorStore:
             query_embeddings=[query_embedding],
             n_results=n_results
         )
+
+    def get_all_chunks(self) -> list[dict]:
+        results = self.collection.get(
+            include=["documents", "metadatas"]
+        )
+
+        chunks = []
+        documents = results.get("documents", [])
+        metadatas = results.get("metadatas", [])
+
+        for text, metadata in zip(documents, metadatas):
+            chunks.append({
+                "text": text,
+                "metadata": metadata,
+                "distance": None,
+            })
+
+        return chunks
