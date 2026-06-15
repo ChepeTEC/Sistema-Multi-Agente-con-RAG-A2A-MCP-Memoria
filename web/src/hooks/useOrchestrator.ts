@@ -74,12 +74,19 @@ async function buildHttpError(response: Response) {
   return new Error(`Backend respondio con estado ${response.status}`);
 }
 
-function sourceToCitation(source: BackendSource, index: number): Citation {
+function normalizeScore(score: number, maxScore: number) {
+  if (maxScore <= 0) return 0;
+  return Math.max(0, Math.min(1, score / maxScore));
+}
+
+function sourceToCitation(source: BackendSource, index: number, maxScore: number): Citation {
   const isWeb = Boolean(source.url);
   const score = typeof source.score === "number"
-    ? source.score
+    ? isWeb
+      ? source.score
+      : normalizeScore(source.score, maxScore)
     : typeof source.distance === "number"
-      ? Math.max(0, 1 - source.distance)
+      ? 1 / (1 + Math.max(0, source.distance))
       : 0;
 
   return {
@@ -124,6 +131,14 @@ function buildToolCalls(response: BackendChatResponse): ToolCall[] {
   return tools;
 }
 
+function getMaxRagScore(sources: BackendSource[]) {
+  const scores = sources
+    .filter((source) => !source.url && typeof source.score === "number")
+    .map((source) => source.score as number);
+
+  return scores.length > 0 ? Math.max(...scores) : 0;
+}
+
 function toExecutionTrace(response: BackendChatResponse, role: ExecutionTrace["role"]): ExecutionTrace {
   return {
     agent: response.agent_selected as AgentKind,
@@ -141,7 +156,7 @@ function toExecutionTrace(response: BackendChatResponse, role: ExecutionTrace["r
 
 export function useOrchestrator() {
   const mock = useMockOrchestrator();
-  const { active, appendMessage, renameIfFirst } = useSessions();
+  const { active, activeId, appendMessage, renameIfFirst } = useSessions();
   const { role } = useUserRole();
   const [isThinking, setIsThinking] = useState(false);
   const backendUrl = useMemo(() => getBackendUrl(), []);
@@ -173,7 +188,7 @@ export function useOrchestrator() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ question: content }),
+          body: JSON.stringify({ question: content, session_id: activeId }),
         });
 
         if (!response.ok) {
@@ -187,7 +202,9 @@ export function useOrchestrator() {
           content: data.answer,
           createdAt: Date.now(),
           trace: toExecutionTrace(data, role),
-          citations: data.sources.map(sourceToCitation),
+          citations: data.sources.map((source, index) =>
+            sourceToCitation(source, index, getMaxRagScore(data.sources)),
+          ),
         };
 
         appendMessage(assistantMsg);
@@ -220,7 +237,7 @@ export function useOrchestrator() {
         setIsThinking(false);
       }
     },
-    [active.messages.length, appendMessage, backendUrl, isThinking, mock, renameIfFirst, role],
+    [active.messages.length, activeId, appendMessage, backendUrl, isThinking, mock, renameIfFirst, role],
   );
 
   return {

@@ -14,6 +14,7 @@ class WebSearchAgent:
     """
 
     AGENT_NAME = "WebSearchAgent"
+    MAX_SEARCH_QUERY_CHARS = 380
 
     def __init__(
         self,
@@ -30,11 +31,13 @@ class WebSearchAgent:
         question: str,
         justification: str,
         max_results: int = 5,
-        search_depth: str = "basic"
+        search_depth: str = "basic",
+        conversation_context: str | None = None,
     ) -> dict:
         started_at = perf_counter()
+        search_query = self._build_search_query(question, conversation_context)
         search_data = self.web_search_tool.search(
-            query=question,
+            query=search_query,
             justification=justification,
             max_results=max_results,
             search_depth=search_depth
@@ -50,7 +53,11 @@ class WebSearchAgent:
             for result in search_data["results"]
         ]
 
-        llm_data = self._generate_answer(question, search_data["results"])
+        llm_data = self._generate_answer(
+            question=question,
+            results=search_data["results"],
+            conversation_context=conversation_context,
+        )
         duration_ms = round((perf_counter() - started_at) * 1000, 2)
 
         return {
@@ -59,6 +66,8 @@ class WebSearchAgent:
             "sources": sources,
             "trace": {
                 "query": search_data["query"],
+                "original_question": question,
+                "has_conversation_context": bool(conversation_context),
                 "justification": search_data["justification"],
                 "urls": [source["url"] for source in sources],
                 "duration_ms": duration_ms,
@@ -77,7 +86,26 @@ class WebSearchAgent:
             "results": search_data["results"]
         }
 
-    def _generate_answer(self, question: str, results: list[dict]) -> dict:
+    def _build_search_query(
+        self,
+        question: str,
+        conversation_context: str | None = None,
+    ) -> str:
+        del conversation_context
+
+        normalized_question = " ".join((question or "").split())
+
+        if len(normalized_question) <= self.MAX_SEARCH_QUERY_CHARS:
+            return normalized_question
+
+        return normalized_question[:self.MAX_SEARCH_QUERY_CHARS].rsplit(" ", 1)[0].strip()
+
+    def _generate_answer(
+        self,
+        question: str,
+        results: list[dict],
+        conversation_context: str | None = None,
+    ) -> dict:
         formatted_results = []
         for index, result in enumerate(results, start=1):
             formatted_results.append(
@@ -89,7 +117,17 @@ class WebSearchAgent:
             )
 
         context = "\n\n".join(formatted_results)
+        memory_section = ""
+        cleaned_conversation_context = (conversation_context or "").strip()
+
+        if cleaned_conversation_context:
+            memory_section = (
+                "Historial reciente de la conversacion:\n"
+                f"{cleaned_conversation_context}\n\n"
+            )
+
         prompt = (
+            f"{memory_section}"
             f"Pregunta del usuario:\n{question}\n\n"
             f"Resultados obtenidos por la herramienta de busqueda:\n"
             f"{context or 'No se encontraron resultados.'}"
@@ -98,7 +136,8 @@ class WebSearchAgent:
             "Responde en espanol usando exclusivamente los resultados web "
             "proporcionados. Incluye citas inline con el formato [Fuente N]. "
             "No inventes datos ni fuentes. Si los resultados no permiten "
-            "responder, indicalo claramente."
+            "responder, indicalo claramente. Usa el historial reciente solo "
+            "para resolver referencias conversacionales, no como fuente."
         )
 
         return self.llm_client.generate(

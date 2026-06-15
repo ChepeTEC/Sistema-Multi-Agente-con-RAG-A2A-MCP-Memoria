@@ -66,6 +66,45 @@ class WebSearchAgentTests(unittest.TestCase):
         )
         self.assertIn("Fuente 1", llm_client.kwargs["prompt"])
 
+    def test_search_query_does_not_include_conversation_history(self):
+        tool = FakeWebSearchTool()
+        llm_client = FakeLLMClient()
+        agent = WebSearchAgent(
+            web_search_tool=tool,
+            llm_client=llm_client,
+        )
+        long_context = "[Turno 1]\n" + ("historial conversacional " * 80)
+
+        agent.answer(
+            question="Costa Rica va a jugar en el mundial de futbol del 2026?",
+            justification="El usuario solicito informacion reciente.",
+            conversation_context=long_context,
+        )
+
+        self.assertEqual(
+            tool.kwargs["query"],
+            "Costa Rica va a jugar en el mundial de futbol del 2026?",
+        )
+        self.assertNotIn("historial conversacional", tool.kwargs["query"])
+        self.assertLessEqual(len(tool.kwargs["query"]), agent.MAX_SEARCH_QUERY_CHARS)
+        self.assertIn("historial conversacional", llm_client.kwargs["prompt"])
+
+    def test_search_query_is_truncated_to_tool_limit(self):
+        tool = FakeWebSearchTool()
+        agent = WebSearchAgent(
+            web_search_tool=tool,
+            llm_client=FakeLLMClient(),
+        )
+        long_question = " ".join(["consulta"] * 100)
+
+        agent.answer(
+            question=long_question,
+            justification="El usuario solicito informacion reciente.",
+        )
+
+        self.assertLessEqual(len(tool.kwargs["query"]), agent.MAX_SEARCH_QUERY_CHARS)
+        self.assertTrue(tool.kwargs["query"].startswith("consulta consulta"))
+
 
 if __name__ == "__main__":
     unittest.main()

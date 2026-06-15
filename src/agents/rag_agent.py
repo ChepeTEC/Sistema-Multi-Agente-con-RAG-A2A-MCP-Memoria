@@ -19,26 +19,39 @@ class RAGAgent:
         self.rag_tool = RAGTool()
         self.llm = GeminiClient()
 
-    def answer(self, question: str, n_results: int = 5) -> dict:
+    def answer(
+        self,
+        question: str,
+        n_results: int = 5,
+        conversation_context: str | None = None,
+    ) -> dict:
         if not question or not question.strip():
             raise ValueError("La pregunta no puede estar vacía.")
 
         trace = langfuse_tracer.create_trace(
             name="rag_agent_answer",
-            input_data={"question": question, "n_results": n_results},
+            input_data={
+                "question": question,
+                "n_results": n_results,
+                "has_conversation_context": bool(conversation_context),
+            },
             metadata={"agent": "RAGAgent"}
         )
 
         try:
+            retrieval_query = self._build_retrieval_query(
+                question=question,
+                conversation_context=conversation_context,
+            )
             retrieved_chunks = self.rag_tool.search_notes(
-                query=question,
+                query=retrieval_query,
                 n_results=n_results
             )
 
             langfuse_tracer.create_span(
                 trace=trace,
                 name="rag_retrieval",
-                input_data={"query": question, "n_results": n_results},
+                input_data={"query": retrieval_query, "n_results": n_results},
                 output_data={"retrieved_chunks_count": len(retrieved_chunks)},
                 metadata={
                     "tool": "RAGTool",
@@ -67,14 +80,9 @@ class RAGAgent:
                 if author_answer:
                     author_chunks = self._filter_author_lookup_chunks(question, clean_chunks)
                     author_sources = self._build_unique_sources(author_chunks) or sources
-                    final_answer = (
-                        f"{author_answer}\n\n"
-                        f"Fuentes consultadas:\n"
-                        f"{self._format_sources(author_sources)}"
-                    )
 
                     result = {
-                        "answer": final_answer,
+                        "answer": author_answer,
                         "sources": author_sources,
                         "chunks": clean_chunks,
                         "agent": "RAGAgent"
@@ -83,7 +91,11 @@ class RAGAgent:
                     langfuse_tracer.update_trace_output(trace, result)
                     return result
 
-            prompt = self._build_prompt(question, clean_chunks)
+            prompt = self._build_prompt(
+                question=question,
+                chunks=clean_chunks,
+                conversation_context=conversation_context,
+            )
             llm_result = self.llm.generate(prompt)
             generated_answer = llm_result["text"]
 
@@ -102,14 +114,8 @@ class RAGAgent:
 
             generated_answer = self._remove_llm_sources(generated_answer)
 
-            final_answer = (
-                f"{generated_answer}\n\n"
-                f"Fuentes consultadas:\n"
-                f"{self._format_sources(sources)}"
-            )
-
             result = {
-                "answer": final_answer,
+                "answer": generated_answer,
                 "sources": sources,
                 "chunks": clean_chunks,
                 "agent": "RAGAgent"
@@ -173,6 +179,8 @@ class RAGAgent:
             "\n**Referencias:**",
             "\nCitas:",
             "\n**Citas:**",
+            "\nFuentes consultadas:",
+            "\n**Fuentes consultadas:**",
         ]
 
         cleaned_answer = answer.strip()
@@ -196,7 +204,8 @@ class RAGAgent:
             cleaned_chunks.append({
                 "text": clean_text(chunk["text"]),
                 "metadata": chunk["metadata"],
-                "distance": chunk.get("distance")
+                "distance": chunk.get("distance"),
+                "score": chunk.get("score"),
             })
 
         return cleaned_chunks
@@ -231,16 +240,86 @@ class RAGAgent:
                 "section": metadata.get("section", ""),
                 "page": metadata.get("page", "desconocida"),
                 "version": metadata.get("version", "desconocida"),
-                "distance": chunk.get("distance")
+                "distance": chunk.get("distance"),
+                "score": chunk.get("score"),
             })
 
         return unique_sources
 
-    def _build_prompt(self, question: str, chunks: list[dict]) -> str:
+    def _build_retrieval_query(
+        self,
+        question: str,
+        conversation_context: str | None = None,
+    ) -> str:
+        context = (conversation_context or "").strip()
+
+        if not context or not self._is_follow_up_question(question):
+            return question
+
+        recent_questions = self._extract_recent_user_questions(context)
+
+        if not recent_questions:
+            return question
+
+        return (
+            "Preguntas recientes relevantes:\n"
+            f"{chr(10).join(recent_questions[-2:])}\n\n"
+            "Pregunta actual:\n"
+            f"{question}"
+        )
+
+    def _is_follow_up_question(self, question: str) -> bool:
+        question_lower = question.lower()
+        follow_up_signals = [
+            "como se relaciona",
+            "cómo se relaciona",
+            "comparalo",
+            "compáralo",
+            "compara",
+            "con eso",
+            "ese tema",
+            "eso",
+            "lo anterior",
+            "relacion con",
+            "relación con",
+            "tiene relacion",
+            "tiene relación",
+        ]
+
+        return any(signal in question_lower for signal in follow_up_signals)
+
+    def _extract_recent_user_questions(self, conversation_context: str) -> list[str]:
+        questions = []
+
+        for line in conversation_context.splitlines():
+            line = line.strip()
+
+            if line.startswith("Usuario:"):
+                question = line.removeprefix("Usuario:").strip()
+
+                if question:
+                    questions.append(question)
+
+        return questions
+
+    def _build_prompt(
+        self,
+        question: str,
+        chunks: list[dict],
+        conversation_context: str | None = None,
+    ) -> str:
         """
         Construye el prompt que recibirá Gemini.
         """
         context = self._format_context(chunks)
+        memory_section = ""
+        cleaned_conversation_context = (conversation_context or "").strip()
+
+        if cleaned_conversation_context:
+            memory_section = (
+                "\nHistorial reciente de la conversacion:\n"
+                f"{cleaned_conversation_context}\n"
+            )
 
         return f"""
 Eres un agente RAG académico para un curso de Inteligencia Artificial.
@@ -254,16 +333,19 @@ Reglas:
 - Redacta una respuesta clara, ordenada y breve.
 - No copies fragmentos completos literalmente si no es necesario.
 - Puedes resumir y reorganizar las ideas.
-- No agregues una sección de fuentes.
-- No escribas "Fuentes:" ni cites fragmentos al final.
+- No agregues una sección de fuentes al final.
+- No escribas "Fuentes:", "Fuentes consultadas:" ni cites fragmentos al final.
 - Solo redacta la respuesta principal.
-- Las fuentes serán agregadas automáticamente por el sistema.
+- Cita la evidencia relevante dentro de la respuesta usando el formato [Fuente N].
+- Las tarjetas de fuentes serán agregadas automáticamente por el sistema.
 
 Reglas adicionales para robustez:
 - Si hay varios fragmentos relacionados, integra la evidencia aunque este repartida entre documentos.
 - Si varios documentos son relevantes, compara o lista la informacion por documento.
 - No digas que falta informacion si los fragmentos recuperados contienen evidencia directa o parcial suficiente para responder.
-- Para puntos importantes, menciona entre parentesis solo el valor exacto de Archivo y Pagina que aparece en el fragmento usado; no inventes ni reformatees nombres de archivo.
+- Para puntos importantes, cita solo el numero de fuente con el formato [Fuente N]; no incluyas Archivo, Pagina, autor ni otros metadatos dentro de la respuesta.
+- Usa el historial reciente solo para entender referencias conversacionales como "eso", "lo anterior" o "compara con lo previo"; no lo trates como fuente academica.
+{memory_section}
 
 Pregunta del usuario:
 {question}
@@ -279,8 +361,9 @@ Respuesta:
         Formatea los chunks recuperados para incluirlos como contexto del LLM.
         """
         context_parts = []
+        source_indices = {}
 
-        for index, chunk in enumerate(chunks, start=1):
+        for chunk in chunks:
             metadata = chunk["metadata"]
 
             source = metadata.get("source", "desconocido")
@@ -289,11 +372,12 @@ Respuesta:
             author = metadata.get("author", "desconocido")
             date = metadata.get("date", "")
             week = metadata.get("week", "")
+            source_key = (source, page, section)
 
-            header = f"[Fragmento {index} | Archivo: {source} | Página: {page}"
+            if source_key not in source_indices:
+                source_indices[source_key] = len(source_indices) + 1
 
-            if section:
-                header += f" | Sección: {section}"
+            header = f"[Fuente {source_indices[source_key]}"
 
             header += "]"
 

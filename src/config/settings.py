@@ -35,6 +35,10 @@ class Settings:
         "WEB_SEARCH_LLM_MODEL",
         "gemini-2.5-flash"
     )
+    SUMMARIZER_LLM_MODEL: str = os.getenv(
+        "SUMMARIZER_LLM_MODEL",
+        "gemini-2.5-flash"
+    )
 
 
 settings = Settings()

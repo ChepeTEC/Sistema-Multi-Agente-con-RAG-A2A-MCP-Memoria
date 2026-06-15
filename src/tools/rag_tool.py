@@ -163,11 +163,20 @@ class RAGTool:
         ]
         scored.sort(key=lambda item: item[0], reverse=True)
 
-        return [
-            chunk
-            for score, chunk in scored
-            if score > -100
-        ][: plan["final_k"]]
+        scored_chunks = []
+
+        for score, chunk in scored:
+            if score <= -100:
+                continue
+
+            chunk_with_score = chunk.copy()
+            chunk_with_score["score"] = round(score, 4)
+            scored_chunks.append(chunk_with_score)
+
+            if len(scored_chunks) >= plan["final_k"]:
+                break
+
+        return scored_chunks
 
     def _semantic_search(self, query_embedding: list[float], n_results: int) -> list[dict]:
         results = self.vector_store.search(

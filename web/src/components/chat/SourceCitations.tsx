@@ -8,12 +8,15 @@ export function SourceCitations({ citations }: { citations: Citation[] }) {
         Fuentes recuperadas ({citations.length})
       </div>
       <div className="grid gap-2">
-        {citations.map((c) => (
+        {citations.map((c, index) => (
           <div
             key={c.id}
             className="rounded-lg border border-border bg-card/40 p-2.5 text-xs transition hover:border-[color:var(--agent-rag)]/40"
           >
             <div className="mb-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+              <span className="rounded bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] text-primary">
+                Fuente {index + 1}
+              </span>
               <span className="inline-flex items-center gap-1">
                 <User className="size-3" /> {c.author}
               </span>

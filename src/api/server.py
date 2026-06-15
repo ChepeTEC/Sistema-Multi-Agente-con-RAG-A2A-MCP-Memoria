@@ -11,6 +11,7 @@ from src.agents.orchestrator_agent import OrchestratorAgent
 
 class ChatRequest(BaseModel):
     question: str
+    session_id: str | None = None
 
 
 app = FastAPI(title="Sistema Multi-Agente API")
@@ -45,7 +46,10 @@ def health() -> dict:
 def chat(request: ChatRequest) -> dict:
     try:
         orchestrator = get_orchestrator()
-        return orchestrator.answer(request.question)
+        return orchestrator.answer(
+            question=request.question,
+            session_id=request.session_id,
+        )
     except Exception as exc:
         return JSONResponse(
             status_code=500,
