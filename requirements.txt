@@ -10,3 +10,6 @@ langchain-community
 langchain-text-splitters
 tavily-python
 google-genai
+langfuse
+psycopg2-binary==2.9.9
+Faker==24.0.0

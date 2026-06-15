@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  # 1. El servicio de la Base de Datos
+  db:
+    image: postgres:15-alpine
+    container_name: MCP_DB
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=mcp_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # El healthcheck asegura que la BD esté lista para recibir conexiones
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d mcp_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 2. El servicio del Script de Python
+  db_populator:
+    build: ./data/db_transactional/
+    container_name: db_init
+    environment:
+      # Sobrescribimos el host para que el script apunte al contenedor 'db'
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=mcp_db
+      - DB_USER=admin
+      - DB_PASSWORD=password
+    depends_on:
+      db:
+        condition: service_healthy # Espera a que el healthcheck de 'db' pase
+    # Esto indica que el contenedor terminará su ejecución tras correr el script
+    restart: "no"
+
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pg_admin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@correo.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:
