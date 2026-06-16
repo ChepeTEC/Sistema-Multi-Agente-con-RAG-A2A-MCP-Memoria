@@ -26,7 +26,7 @@ export const AGENT_META: Record<
     ring: "ring-[color:var(--agent-web)]/40",
     icon: Globe,
   },
-  mcp: {
+  transactional: {
     label: "Agente MCP Transaccional",
     color: "text-[color:var(--agent-mcp)]",
     bg: "bg-[color:var(--agent-mcp)]/15",
