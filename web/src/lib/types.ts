@@ -1,4 +1,4 @@
-export type AgentKind = "orchestrator" | "rag" | "web" | "mcp" | "summary";
+export type AgentKind = "orchestrator" | "rag" | "web" | "transactional" | "summary";
 
 export type UserRole = "Estudiante" | "Profesor" | "Auditor";
 

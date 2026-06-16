@@ -39,6 +39,10 @@ class Settings:
         "SUMMARIZER_LLM_MODEL",
         "gemini-2.5-flash"
     )
+    TRANSACTIONAL_LLM_MODEL: str = os.getenv(
+        "TRANSACTIONAL_LLM_MODEL",
+        "gemini-2.5-pro"
+    )
 
 
 settings = Settings()

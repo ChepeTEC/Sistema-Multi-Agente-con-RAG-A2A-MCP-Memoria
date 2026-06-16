@@ -8,6 +8,8 @@ from src.llm.base import LLMClient
 from src.llm.gemini_client import GeminiClient
 from src.observability.langfuse_client import langfuse_tracer
 from src.tools.memory_tool import MemoryTool
+from src.agents.transactional_agent import TransactionalAgent
+
 
 
 class OrchestratorAgent:
@@ -27,19 +29,23 @@ class OrchestratorAgent:
         rag_agent: RAGAgent | None = None,
         summarizer_agent: SummarizerAgent | None = None,
         web_search_agent: WebSearchAgent | None = None,
+        transactional_agent: TransactionalAgent | None = None,
         llm_client: LLMClient | None = None,
         memory_tool: MemoryTool | None = None,
         rag_agent_factory: Callable[[], RAGAgent] | None = None,
         summarizer_agent_factory: Callable[[], SummarizerAgent] | None = None,
         web_search_agent_factory: Callable[[], WebSearchAgent] | None = None,
+        transactional_agent_factory: Callable[[], TransactionalAgent] | None = None
     ):
         self.rag_agent = rag_agent
         self.summarizer_agent = summarizer_agent
         self.web_search_agent = web_search_agent
+        self.transactional_agent = transactional_agent
         self.memory_tool = memory_tool or MemoryTool()
         self.rag_agent_factory = rag_agent_factory or RAGAgent
         self.summarizer_agent_factory = summarizer_agent_factory or SummarizerAgent
         self.web_search_agent_factory = web_search_agent_factory or WebSearchAgent
+        self.transactional_agent_factory = transactional_agent_factory or TransactionalAgent
         self.llm_client = llm_client or GeminiClient(
             model=settings.ORCHESTRATOR_LLM_MODEL
         )
@@ -128,6 +134,12 @@ class OrchestratorAgent:
                 agent_result = self._get_web_search_agent().answer(
                     question=question,
                     justification=decision_reason,
+                    conversation_context=conversation_context,
+                )
+            elif agent_selected == "transactional":
+                delegated_agent_name = "TransactionalAgent"
+                agent_result = self._get_transactional_agent().answer(
+                    question=question,
                     conversation_context=conversation_context,
                 )
             else:
@@ -352,10 +364,40 @@ class OrchestratorAgent:
             "sintesis de lo anterior",
             "síntesis de lo anterior",
         ]
+        transactional_signals = [
+            "transacción",
+            "transacciones",
+            "movimiento bancario",
+            "movimientos bancarios",
+            "actividad bancaria",
+            "cuenta bancaria",
+            "cuentas bancarias",
+            "estado de cuenta",
+            "estados de cuenta",
+            "últimas transacciones",
+            "último movimiento",
+            "últimos movimientos",
+            "revisa mi cuenta",
+            "revisa mi transacción",
+            "revisa mi transacciones",
+            "sospechoso",
+            "sospechosa",
+            "fraude",
+            "transaccion sospechosa",
+            "transacción sospechosa",
+            "transacciones sospechosas",
+            "transaccion",
+            "cliente", 
+            "clientes",
+            "cuenta"
+            "numero de cuenta",
+            
+        ]
 
         has_web_signal = any(signal in question_lower for signal in web_signals)
         has_academic_signal = any(signal in question_lower for signal in academic_signals)
         has_summary_signal = any(signal in question_lower for signal in summary_signals)
+        has_transactional_signal = any(signal in question_lower for signal in transactional_signals)
 
         if has_summary_signal:
             return "summary"
@@ -365,6 +407,9 @@ class OrchestratorAgent:
 
         if has_academic_signal:
             return "rag"
+        
+        if has_transactional_signal:
+            return "transactional"
 
         return cls._normalize_decision(raw_decision)
 
@@ -379,6 +424,12 @@ class OrchestratorAgent:
             self.summarizer_agent = self.summarizer_agent_factory()
 
         return self.summarizer_agent
+    
+    def _get_transactional_agent(self) -> TransactionalAgent:
+        if self.transactional_agent is None:
+            self.transactional_agent = self.transactional_agent_factory()
+
+        return self.transactional_agent
 
     def _get_web_search_agent(self) -> WebSearchAgent:
         if self.web_search_agent is None:
