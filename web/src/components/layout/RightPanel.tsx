@@ -9,11 +9,13 @@ export function RightPanel() {
     <aside className="flex h-full w-[22rem] flex-col border-l border-border bg-sidebar/60 backdrop-blur">
       <Tabs defaultValue="rag" className="flex h-full min-h-0 flex-col">
         <div className="border-b border-border p-3">
-          <TabsList className="grid w-full grid-cols-1">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="rag" className="gap-1.5">
               <Database className="size-3.5" /> RAG
             </TabsTrigger>
-           
+            <TabsTrigger value="mcp" className="gap-1.5">
+              <Lock className="size-3.5" /> MCP
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -27,7 +29,18 @@ export function RightPanel() {
           <RagConfigSwitch />
         </TabsContent>
 
-        
+        <TabsContent value="mcp" className="scrollbar-thin min-h-0 flex-1 overflow-y-auto p-4">
+          <div className="mb-3">
+            <h3 className="font-display text-sm font-semibold">Panel MCP</h3>
+            <p className="text-[11px] text-muted-foreground">
+              Vista local de auditoria transaccional.
+            </p>
+          </div>
+          <div className="space-y-3">
+            <McpDataTable />
+            <AuditLog />
+          </div>
+        </TabsContent>
       </Tabs>
     </aside>
   );

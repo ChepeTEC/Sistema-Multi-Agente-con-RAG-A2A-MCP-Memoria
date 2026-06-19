@@ -1,6 +1,8 @@
 import json
 import sys
 import os
+import unittest
+from unittest.mock import patch
 
 
 ruta_mcp = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src', 'mcp'))
@@ -13,6 +15,112 @@ from mcp_server import (
     get_client_spending_behavior,
     create_fraud_case
 )
+
+
+class FakeCursor:
+    def __init__(self, fetchone_result=None, fetchall_result=None):
+        self.executed_query = None
+        self.executed_params = None
+        self.fetchone_result = fetchone_result
+        self.fetchall_result = fetchall_result or []
+
+    def execute(self, query, params=None):
+        self.executed_query = query
+        self.executed_params = params
+
+    def fetchone(self):
+        return self.fetchone_result or (20, 181.60, 1200.00)
+
+    def fetchall(self):
+        return self.fetchall_result
+
+    def close(self):
+        pass
+
+
+class FakeConnection:
+    def __init__(self, cursor):
+        self._cursor = cursor
+
+    def cursor(self):
+        return self._cursor
+
+    def close(self):
+        pass
+
+    def commit(self):
+        pass
+
+
+class McpServerUnitTests(unittest.TestCase):
+    def test_spending_behavior_query_scopes_types_to_requested_client(self):
+        cursor = FakeCursor()
+
+        with patch("mcp_server.obtener_conexion", return_value=FakeConnection(cursor)):
+            result = json.loads(get_client_spending_behavior(
+                cliente_id=1,
+                justificacion="Auditoria de comportamiento de gasto del cliente 1.",
+            ))
+
+        normalized_query = " ".join(cursor.executed_query.split())
+        self.assertIn("WHERE c.cliente_id = %s AND t.tipo IN ('RETIRO', 'COMPRA')", normalized_query)
+        self.assertEqual(cursor.executed_params, (1,))
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["comportamiento"]["total_transacciones_salida"], 20)
+
+    def test_mcp_rejects_short_justification_before_database_access(self):
+        with patch("mcp_server.obtener_conexion") as connection:
+            result = json.loads(get_client_profile(
+                cliente_id=1,
+                justificacion="corto",
+            ))
+
+        connection.assert_not_called()
+        self.assertIn("error", result)
+        self.assertIn("justificación", result["error"])
+
+    def test_client_profile_masks_account_numbers(self):
+        cursor = FakeCursor(
+            fetchall_result=[
+                (1, "Cliente Demo", "MEDIO", "1234567890123456", "ACTIVA", 1500.25),
+            ]
+        )
+
+        with patch("mcp_server.obtener_conexion", return_value=FakeConnection(cursor)):
+            result = json.loads(get_client_profile(
+                cliente_id=1,
+                justificacion="Auditoria autorizada del perfil financiero.",
+            ))
+
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["data"][0]["cuenta_segura"], "****-****-****-3456")
+        self.assertNotIn("1234567890123456", json.dumps(result))
+
+    def test_fraud_summary_rejects_massive_window(self):
+        from mcp_server import get_fraud_case_summary
+
+        with patch("mcp_server.obtener_conexion") as connection:
+            result = json.loads(get_fraud_case_summary(
+                justificacion="Revision agregada de patrones de fraude.",
+                days=999,
+            ))
+
+        connection.assert_not_called()
+        self.assertIn("error", result)
+        self.assertIn("365", result["error"])
+
+    def test_create_fraud_case_rejects_invalid_severity_before_insert(self):
+        with patch("mcp_server.obtener_conexion") as connection:
+            result = json.loads(create_fraud_case(
+                transaccion_id=1,
+                reason="Operacion inusual",
+                severity="URGENTE",
+                justificacion="Apertura de caso por patron sospechoso documentado.",
+            ))
+
+        connection.assert_not_called()
+        self.assertIn("error", result)
+        self.assertIn("Severidad", result["error"])
 
 def imprimir_resultado(nombre_test, json_string):
     """Función auxiliar para imprimir el JSON de forma bonita en la terminal."""

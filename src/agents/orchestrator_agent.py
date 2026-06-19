@@ -1,5 +1,6 @@
 from time import perf_counter
 from collections.abc import Callable
+import unicodedata
 from src.agents.rag_agent import RAGAgent
 from src.agents.summarizer_agent import SummarizerAgent
 from src.agents.web_search_agent import WebSearchAgent
@@ -7,6 +8,7 @@ from src.config.settings import settings
 from src.llm.base import LLMClient
 from src.llm.gemini_client import GeminiClient
 from src.observability.langfuse_client import langfuse_tracer
+from src.tools.historical_memory_tool import HistoricalMemoryTool
 from src.tools.memory_tool import MemoryTool
 from src.agents.transactional_agent import TransactionalAgent
 
@@ -22,7 +24,7 @@ class OrchestratorAgent:
     """
 
     AGENT_NAME = "OrchestratorAgent"
-    VALID_AGENTS = {"rag", "summary", "web"}
+    VALID_AGENTS = {"rag", "summary", "transactional", "web"}
 
     def __init__(
         self,
@@ -31,6 +33,7 @@ class OrchestratorAgent:
         web_search_agent: WebSearchAgent | None = None,
         transactional_agent: TransactionalAgent | None = None,
         llm_client: LLMClient | None = None,
+        historical_memory_tool: HistoricalMemoryTool | None = None,
         memory_tool: MemoryTool | None = None,
         rag_agent_factory: Callable[[], RAGAgent] | None = None,
         summarizer_agent_factory: Callable[[], SummarizerAgent] | None = None,
@@ -41,6 +44,7 @@ class OrchestratorAgent:
         self.summarizer_agent = summarizer_agent
         self.web_search_agent = web_search_agent
         self.transactional_agent = transactional_agent
+        self.historical_memory_tool = historical_memory_tool or HistoricalMemoryTool()
         self.memory_tool = memory_tool or MemoryTool()
         self.rag_agent_factory = rag_agent_factory or RAGAgent
         self.summarizer_agent_factory = summarizer_agent_factory or SummarizerAgent
@@ -94,6 +98,35 @@ class OrchestratorAgent:
             )
 
             conversation_context = memory_context["formatted_context"]
+            historical_memory_lookup = self._lookup_historical_memory(
+                question=question,
+                session_id=session_id,
+            )
+
+            if historical_memory_lookup["queried"]:
+                langfuse_tracer.create_span(
+                    trace=trace,
+                    name="historical_memory_lookup",
+                    input_data={
+                        "question": question,
+                        "session_id": session_id,
+                    },
+                    output_data={
+                        "matches_count": historical_memory_lookup["matches_count"],
+                        "has_context": historical_memory_lookup["has_context"],
+                        "scope": historical_memory_lookup["scope"],
+                        "error": historical_memory_lookup["error"],
+                    },
+                    metadata={
+                        "agent": self.AGENT_NAME,
+                        "tool": self.historical_memory_tool.TOOL_NAME,
+                    }
+                )
+                conversation_context = self._merge_contexts(
+                    conversation_context,
+                    historical_memory_lookup["formatted_context"],
+                )
+
             decision_data = self._decide_agent(question, conversation_context)
             agent_selected = decision_data["agent_selected"]
             decision_reason = self._build_decision_reason(agent_selected)
@@ -122,8 +155,20 @@ class OrchestratorAgent:
             )
 
             if agent_selected == "summary":
-                memory_context = self.memory_tool.get_summary_context(session_id)
-                conversation_context = memory_context["formatted_context"]
+                summary_memory_context = self.memory_tool.get_summary_context(session_id)
+                temporal_summary_context = summary_memory_context["formatted_context"]
+                if historical_memory_lookup["queried"]:
+                    conversation_context = self._merge_contexts(
+                        temporal_summary_context,
+                        historical_memory_lookup["formatted_context"],
+                    )
+                    memory_context = {
+                        **summary_memory_context,
+                        "turns_count": summary_memory_context["turns_count"],
+                    }
+                else:
+                    memory_context = summary_memory_context
+                    conversation_context = temporal_summary_context
                 delegated_agent_name = "SummarizerAgent"
                 agent_result = self._get_summarizer_agent().answer(
                     question=question,
@@ -176,6 +221,13 @@ class OrchestratorAgent:
                 agent_selected=agent_selected,
                 sources=agent_result.get("sources", []),
             )
+            historical_memory_update = self._save_historical_memory_turn(
+                session_id=session_id,
+                question=question,
+                answer=agent_result.get("answer", ""),
+                agent_selected=agent_selected,
+                sources=agent_result.get("sources", []),
+            )
 
             langfuse_tracer.create_span(
                 trace=trace,
@@ -187,6 +239,20 @@ class OrchestratorAgent:
                 },
                 output_data=memory_update,
                 metadata={"agent": self.AGENT_NAME, "tool": self.memory_tool.TOOL_NAME}
+            )
+            langfuse_tracer.create_span(
+                trace=trace,
+                name="historical_memory_update",
+                input_data={
+                    "session_id": session_id,
+                    "question": question,
+                    "agent_selected": agent_selected,
+                },
+                output_data=historical_memory_update,
+                metadata={
+                    "agent": self.AGENT_NAME,
+                    "tool": self.historical_memory_tool.TOOL_NAME,
+                }
             )
 
             result = {
@@ -203,6 +269,19 @@ class OrchestratorAgent:
                         "type": "temporal_session",
                         "turns_used": memory_context["turns_count"],
                         "updated": True,
+                    },
+                    "historical_memory": {
+                        "type": "persistent_sqlite",
+                        "available": historical_memory_lookup["available"],
+                        "queried": historical_memory_lookup["queried"],
+                        "matches": historical_memory_lookup["matches_count"],
+                        "scope": historical_memory_lookup["scope"],
+                        "updated": historical_memory_update["updated"],
+                        "turn_id": historical_memory_update.get("id"),
+                        "error": (
+                            historical_memory_lookup["error"]
+                            or historical_memory_update.get("error")
+                        ),
                     },
                     "decision_model": decision_data["model"],
                     "decision_provider": decision_data["provider"],
@@ -262,14 +341,18 @@ class OrchestratorAgent:
             "Eres el clasificador de un sistema multi-agente academico. "
             "Debes decidir que agente debe responder la pregunta del usuario. "
             "Elige summary si el usuario pide resumir, sintetizar o listar lo "
-            "hablado en la conversacion o sesion actual. "
+            "hablado en la conversacion, sesion actual o historial persistente. "
             "Elige rag para conceptos de IA, redes neuronales, funciones de "
             "activacion, descenso del gradiente, backpropagation, transformers, "
             "RAG, embeddings y cualquier tema que pueda responderse con apuntes "
-            "o documentos del curso. Elige web solo si el usuario pide de forma "
+            "o documentos del curso. Elige transactional si el usuario pregunta "
+            "por movimientos de clientes, historial de transacciones, fraude, "
+            "comportamiento de gasto, cuentas bancarias, perfiles financieros, "
+            "comercios, riesgo o analisis financiero sobre la base transaccional. "
+            "Elige web solo si el usuario pide de forma "
             "explicita actualidad, noticias, internet, paginas web, documentacion "
             "oficial actual o informacion reciente. Si existe duda, elige rag. "
-            "Responde exclusivamente con una palabra: rag, summary o web."
+            "Responde exclusivamente con una palabra: rag, summary, transactional o web."
         )
 
     @staticmethod
@@ -303,7 +386,7 @@ class OrchestratorAgent:
 
     @classmethod
     def _select_agent(cls, question: str, raw_decision: str) -> str:
-        question_lower = question.lower()
+        question_lower = cls._normalize_text(question)
 
         web_signals = [
             "actual",
@@ -346,11 +429,26 @@ class OrchestratorAgent:
             "hemos hablado",
             "hemos visto",
             "preguntas realizadas",
+            "preguntas anteriores",
+            "preguntas pasadas",
             "que hablamos",
             "qué hablamos",
             "que hemos hablado",
             "qué hemos hablado",
             "respuesta anterior",
+            "sesiones anteriores",
+            "historial conversacional",
+            "historial de la sesion",
+            "historial de la sesión",
+            "memoria historica",
+            "memoria histórica",
+            "otra sesion",
+            "otra sesión",
+            "otras sesiones",
+            "anteriormente",
+            "antes",
+            "ya habiamos",
+            "ya habíamos",
             "resumen de esta sesion",
             "resumen de esta sesión",
             "resume esta sesion",
@@ -365,6 +463,17 @@ class OrchestratorAgent:
             "síntesis de lo anterior",
         ]
         transactional_signals = [
+            "analisis financiero",
+            "analizar gasto",
+            "auditar cliente",
+            "auditoria financiera",
+            "bancaria",
+            "bancario",
+            "caso de fraude",
+            "casos de fraude",
+            "comercio",
+            "comercios",
+            "comportamiento de gasto",
             "transacción",
             "transacciones",
             "movimiento bancario",
@@ -374,12 +483,20 @@ class OrchestratorAgent:
             "cuentas bancarias",
             "estado de cuenta",
             "estados de cuenta",
+            "financiero",
+            "financiera",
+            "gasto",
+            "gastos",
+            "historial de transacciones",
             "últimas transacciones",
             "último movimiento",
             "últimos movimientos",
+            "movimiento",
             "revisa mi cuenta",
             "revisa mi transacción",
             "revisa mi transacciones",
+            "perfil financiero",
+            "riesgo",
             "sospechoso",
             "sospechosa",
             "fraude",
@@ -389,7 +506,7 @@ class OrchestratorAgent:
             "transaccion",
             "cliente", 
             "clientes",
-            "cuenta"
+            "cuenta",
             "numero de cuenta",
             
         ]
@@ -399,17 +516,20 @@ class OrchestratorAgent:
         has_summary_signal = any(signal in question_lower for signal in summary_signals)
         has_transactional_signal = any(signal in question_lower for signal in transactional_signals)
 
-        if has_summary_signal:
+        if cls._is_historical_memory_request(question):
             return "summary"
 
-        if has_web_signal:
-            return "web"
+        if has_summary_signal:
+            return "summary"
 
         if has_academic_signal:
             return "rag"
         
         if has_transactional_signal:
             return "transactional"
+
+        if has_web_signal:
+            return "web"
 
         return cls._normalize_decision(raw_decision)
 
@@ -437,6 +557,127 @@ class OrchestratorAgent:
 
         return self.web_search_agent
 
+    def _lookup_historical_memory(self, question: str, session_id: str) -> dict:
+        if not self._is_historical_memory_request(question):
+            return {
+                "available": True,
+                "queried": False,
+                "matches_count": 0,
+                "has_context": False,
+                "scope": "none",
+                "formatted_context": "",
+                "error": None,
+            }
+
+        try:
+            context = self.historical_memory_tool.search_context(
+                query=question,
+                session_id=None,
+            )
+        except Exception as exc:
+            return {
+                "available": False,
+                "queried": True,
+                "matches_count": 0,
+                "has_context": False,
+                "scope": "global",
+                "formatted_context": "",
+                "error": str(exc),
+            }
+
+        return {
+            "available": True,
+            "queried": True,
+            "matches_count": context["matches_count"],
+            "has_context": context["has_context"],
+            "scope": context["scope"],
+            "formatted_context": context["formatted_context"],
+            "error": None,
+        }
+
+    @classmethod
+    def _is_historical_memory_request(cls, question: str) -> bool:
+        question_lower = cls._normalize_text(question)
+        signals = [
+            "anteriormente",
+            "antes",
+            "historial conversacional",
+            "historial de la sesion",
+            "memoria historica",
+            "pregunte",
+            "pregunta anterior",
+            "preguntas anteriores",
+            "preguntas pasadas",
+            "que pregunte",
+            "sesiones anteriores",
+            "ya habia",
+            "ya habiamos",
+            "ya consultamos",
+            "ya habiamos consultado",
+            "hablamos antes",
+            "consultamos antes",
+            "consultado antes",
+            "en otra sesion",
+            "en otra sesión",
+            "en otras sesiones",
+            "otra sesion",
+            "otra sesión",
+            "otras sesiones",
+            "sesion pasada",
+            "sesión pasada",
+            "sesiones pasadas",
+        ]
+
+        return any(signal in question_lower for signal in signals)
+
+    def _save_historical_memory_turn(
+        self,
+        session_id: str,
+        question: str,
+        answer: str,
+        agent_selected: str,
+        sources: list | None = None,
+    ) -> dict:
+        try:
+            update = self.historical_memory_tool.save_turn(
+                session_id=session_id,
+                question=question,
+                answer=answer,
+                agent_selected=agent_selected,
+                sources=sources,
+            )
+            return {
+                **update,
+                "updated": True,
+                "error": None,
+            }
+        except Exception as exc:
+            return {
+                "id": None,
+                "session_id": session_id,
+                "question": question,
+                "agent_selected": agent_selected,
+                "sources_count": len(sources or []),
+                "created_at": None,
+                "updated": False,
+                "error": str(exc),
+            }
+
+    @staticmethod
+    def _merge_contexts(*contexts: str) -> str:
+        cleaned_contexts = [context.strip() for context in contexts if context and context.strip()]
+        if not cleaned_contexts:
+            return ""
+
+        return "\n\n".join(cleaned_contexts)
+
+    @staticmethod
+    def _normalize_text(text: str) -> str:
+        normalized = unicodedata.normalize("NFKD", text.lower())
+        return "".join(
+            char for char in normalized if not unicodedata.combining(char)
+        )
+
     @staticmethod
     def _build_decision_reason(agent_selected: str) -> str:
         if agent_selected == "summary":
@@ -449,6 +690,13 @@ class OrchestratorAgent:
             return (
                 "Gemini clasifico la pregunta como una consulta que requiere "
                 "informacion externa, reciente o disponible en internet."
+            )
+
+        if agent_selected == "transactional":
+            return (
+                "Gemini clasifico la pregunta como una consulta financiera o "
+                "transaccional que debe resolverse mediante el agente MCP y la "
+                "base PostgreSQL transaccional."
             )
 
         return (

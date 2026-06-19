@@ -4,7 +4,17 @@
 # Python cache files
 __pycache__/
 *.py[cod]
+.pytest_cache/
+pytest-cache-files-*/
 
-# carpets
+# Runtime logs and local test artifacts
+*.log
+*.err
+*.pid
+quick-system-audit-results*.json
+system-question-audit-results.json
+rag-memory-audit-results*.json
+historical-memory-runtime-tests/
+data/memory/
 
 /env

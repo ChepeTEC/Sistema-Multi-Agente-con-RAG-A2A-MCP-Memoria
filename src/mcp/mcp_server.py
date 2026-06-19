@@ -161,7 +161,7 @@ def get_client_spending_behavior(cliente_id: int, justificacion: str) -> str:
         SELECT COUNT(t.id), AVG(t.monto), MAX(t.monto)
         FROM transacciones t
         JOIN cuentas c ON t.cuenta_id = c.id
-        WHERE c.cliente_id = %s AND t.tipo = 'RETIRO' OR t.tipo = 'COMPRA';
+        WHERE c.cliente_id = %s AND t.tipo IN ('RETIRO', 'COMPRA');
     """
     try:
         conn = obtener_conexion()
@@ -209,6 +209,88 @@ def get_merchant_risk_score(merchant_name: str, justificacion: str) -> str:
         "nivel_riesgo_sugerido": riesgo,
         "nota": "Riesgo ALTO si coincide con plataformas de criptomonedas o apuestas."
     })
+
+@mcp.tool()
+def get_fraud_case_summary(justificacion: str, days: int = 30) -> str:
+    """
+    Resume los casos de fraude existentes sin consultar transacciones masivamente.
+
+    Args:
+        justificacion (str): Motivo de la revision agregada de patrones de fraude.
+        days (int): Ventana temporal a revisar. Por defecto limita a los ultimos 30 dias.
+    """
+    error = validar_justificacion(justificacion)
+    if error: return error
+
+    try:
+        days = int(days)
+    except (TypeError, ValueError):
+        return json.dumps({"error": "days debe ser un entero positivo."})
+
+    if days < 1 or days > 365:
+        return json.dumps({"error": "days debe estar entre 1 y 365 para evitar consultas masivas."})
+
+    summary_query = """
+        SELECT severidad, estado_caso, COUNT(*)
+        FROM casos_fraude
+        WHERE fecha_apertura >= CURRENT_TIMESTAMP - (%s * INTERVAL '1 day')
+        GROUP BY severidad, estado_caso
+        ORDER BY severidad, estado_caso;
+    """
+    cases_query = """
+        SELECT cf.id, cf.transaccion_id, cf.motivo, cf.severidad, cf.estado_caso,
+               t.monto, t.tipo, t.fecha_hora, t.pais_origen, t.comercio_o_destino,
+               c.cliente_id
+        FROM casos_fraude cf
+        JOIN transacciones t ON cf.transaccion_id = t.id
+        JOIN cuentas c ON t.cuenta_id = c.id
+        WHERE cf.fecha_apertura >= CURRENT_TIMESTAMP - (%s * INTERVAL '1 day')
+        ORDER BY cf.fecha_apertura DESC
+        LIMIT 20;
+    """
+
+    try:
+        conn = obtener_conexion()
+        cursor = conn.cursor()
+        cursor.execute(summary_query, (days,))
+        resumen = [
+            {
+                "severidad": fila[0],
+                "estado": fila[1],
+                "cantidad": fila[2],
+            }
+            for fila in cursor.fetchall()
+        ]
+
+        cursor.execute(cases_query, (days,))
+        casos = []
+        for fila in cursor.fetchall():
+            casos.append({
+                "caso_id": fila[0],
+                "transaccion_id": fila[1],
+                "motivo": fila[2],
+                "severidad": fila[3],
+                "estado": fila[4],
+                "monto": float(fila[5]),
+                "tipo": fila[6],
+                "fecha": fila[7].strftime("%Y-%m-%d %H:%M:%S") if hasattr(fila[7], 'strftime') else str(fila[7]),
+                "pais_origen": fila[8],
+                "comercio": fila[9],
+                "cliente_id": fila[10],
+            })
+
+        return json.dumps({
+            "status": "success",
+            "days": days,
+            "summary": resumen,
+            "cases_count": len(casos),
+            "cases": casos,
+        })
+    except Exception as e:
+        return json.dumps({"error": str(e)})
+    finally:
+        if 'cursor' in locals(): cursor.close()
+        if 'conn' in locals(): conn.close()
 
 # ==========================================
 # 4. HERRAMIENTAS MCP (ESCRITURA)

@@ -17,8 +17,10 @@ class LangfuseTracer:
     def __init__(self) -> None:
         self.enabled = os.getenv("LANGFUSE_ENABLED", "false").lower() == "true"
         self.client = None
+        self.disabled_reason = None
 
         if not self.enabled:
+            self.disabled_reason = "LANGFUSE_ENABLED is not true"
             return
 
         try:
@@ -33,8 +35,7 @@ class LangfuseTracer:
             )
 
             if not public_key or not secret_key:
-                print("[Langfuse] No se encontraron keys. Observabilidad desactivada.")
-                self.enabled = False
+                self._disable("No se encontraron keys.")
                 return
 
             os.environ["LANGFUSE_PUBLIC_KEY"] = public_key
@@ -44,17 +45,13 @@ class LangfuseTracer:
             self.client = get_client()
 
             if hasattr(self.client, "auth_check") and not self.client.auth_check():
-                print("[Langfuse] No se pudo autenticar. Revise las keys y el host.")
-                self.enabled = False
-                self.client = None
+                self._disable("No se pudo autenticar. Revise las keys y el host.")
                 return
 
             print("[Langfuse] Observabilidad activada.")
 
         except Exception as exc:
-            print(f"[Langfuse] No se pudo inicializar: {exc}")
-            self.enabled = False
-            self.client = None
+            self._disable(f"No se pudo inicializar: {exc}")
 
     def create_trace(
         self,
@@ -189,6 +186,12 @@ class LangfuseTracer:
                     observation.update(**{key: value})
                 except Exception:
                     pass
+
+    def _disable(self, reason: str) -> None:
+        self.enabled = False
+        self.client = None
+        self.disabled_reason = reason
+        print(f"[Langfuse] {reason} Observabilidad desactivada.")
 
 
 langfuse_tracer = LangfuseTracer()

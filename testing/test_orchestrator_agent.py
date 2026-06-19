@@ -101,6 +101,103 @@ class FakeSummarizerAgent:
         }
 
 
+class FakeTransactionalAgent:
+    def __init__(self):
+        self.calls = []
+
+    def answer(
+        self,
+        question: str,
+        conversation_context: str | None = None,
+    ) -> dict:
+        self.calls.append({
+            "question": question,
+            "conversation_context": conversation_context,
+        })
+        return {
+            "agent": "TransactionalAgent",
+            "answer": "Respuesta desde MCP transaccional.",
+            "sources": ["PostgreSQL Database via MCP"],
+            "trace": {
+                "duration_ms": 12.5,
+            },
+        }
+
+
+class FakeHistoricalMemoryTool:
+    TOOL_NAME = "HistoricalMemoryTool"
+
+    def __init__(self, formatted_context: str = ""):
+        self.formatted_context = formatted_context
+        self.search_calls = []
+        self.saved_turns = []
+
+    def search_context(
+        self,
+        query: str,
+        session_id: str | None = None,
+        limit: int | None = None,
+    ) -> dict:
+        self.search_calls.append({
+            "query": query,
+            "session_id": session_id,
+            "limit": limit,
+        })
+        return {
+            "query": query,
+            "session_id": session_id,
+            "scope": "global",
+            "matches_count": 1 if self.formatted_context else 0,
+            "has_context": bool(self.formatted_context),
+            "formatted_context": self.formatted_context,
+            "turns": [],
+        }
+
+    def save_turn(
+        self,
+        session_id: str,
+        question: str,
+        answer: str,
+        agent_selected: str,
+        sources: list | None = None,
+    ) -> dict:
+        self.saved_turns.append({
+            "session_id": session_id,
+            "question": question,
+            "answer": answer,
+            "agent_selected": agent_selected,
+            "sources": sources or [],
+        })
+        return {
+            "id": len(self.saved_turns),
+            "session_id": session_id,
+            "question": question,
+            "agent_selected": agent_selected,
+            "sources_count": len(sources or []),
+            "created_at": "2026-06-18T00:00:00+00:00",
+        }
+
+
+class FailingHistoricalMemoryTool(FakeHistoricalMemoryTool):
+    def search_context(
+        self,
+        query: str,
+        session_id: str | None = None,
+        limit: int | None = None,
+    ) -> dict:
+        raise RuntimeError("historical search unavailable")
+
+    def save_turn(
+        self,
+        session_id: str,
+        question: str,
+        answer: str,
+        agent_selected: str,
+        sources: list | None = None,
+    ) -> dict:
+        raise RuntimeError("historical save unavailable")
+
+
 def exploding_rag_factory():
     raise RuntimeError("RAG no debio instanciarse")
 
@@ -168,6 +265,163 @@ class OrchestratorAgentTests(unittest.TestCase):
         self.assertIn("internet", web_agent.calls[0]["justification"])
         self.assertEqual(result["trace"]["delegated_agent"], "WebSearchAgent")
         self.assertEqual(result["trace"]["delegated_trace"]["urls"], ["https://example.com"])
+
+    def test_routes_to_transactional_when_gemini_selects_transactional(self):
+        transactional_agent = FakeTransactionalAgent()
+        orchestrator = OrchestratorAgent(
+            rag_agent=FakeRAGAgent(),
+            web_search_agent=FakeWebSearchAgent(),
+            transactional_agent=transactional_agent,
+            llm_client=FakeDecisionLLM("transactional"),
+        )
+
+        result = orchestrator.answer("Analiza el perfil financiero del cliente 1.")
+
+        self.assertEqual(result["agent_selected"], "transactional")
+        self.assertEqual(result["answer"], "Respuesta desde MCP transaccional.")
+        self.assertEqual(result["trace"]["delegated_agent"], "TransactionalAgent")
+        self.assertIn("MCP", result["decision_reason"])
+        self.assertEqual(
+            transactional_agent.calls[0]["question"],
+            "Analiza el perfil financiero del cliente 1.",
+        )
+
+    def test_transactional_signals_are_forced_to_transactional_before_web(self):
+        questions = [
+            "Busca las transacciones del cliente 1.",
+            "Muestrame los movimientos bancarios del cliente 3.",
+            "Analiza el comportamiento de gasto del cliente 3.",
+            "Existen patrones sospechosos de fraude?",
+            "Cual es el riesgo del comercio Casino Online?",
+        ]
+
+        for question in questions:
+            with self.subTest(question=question):
+                transactional_agent = FakeTransactionalAgent()
+                web_agent = FakeWebSearchAgent()
+                orchestrator = OrchestratorAgent(
+                    rag_agent=FakeRAGAgent(),
+                    web_search_agent=web_agent,
+                    transactional_agent=transactional_agent,
+                    llm_client=FakeDecisionLLM("web"),
+                )
+
+                result = orchestrator.answer(question)
+
+                self.assertEqual(result["agent_selected"], "transactional")
+                self.assertEqual(result["trace"]["delegated_agent"], "TransactionalAgent")
+                self.assertEqual(web_agent.calls, [])
+                self.assertEqual(transactional_agent.calls[0]["question"], question)
+
+    def test_transaction_history_request_still_routes_to_transactional(self):
+        transactional_agent = FakeTransactionalAgent()
+        historical_memory_tool = FakeHistoricalMemoryTool(
+            formatted_context="Usuario: Antes hablamos de CNN."
+        )
+        orchestrator = OrchestratorAgent(
+            rag_agent=FakeRAGAgent(),
+            summarizer_agent=FakeSummarizerAgent(),
+            web_search_agent=FakeWebSearchAgent(),
+            transactional_agent=transactional_agent,
+            llm_client=FakeDecisionLLM("summary"),
+            historical_memory_tool=historical_memory_tool,
+        )
+
+        result = orchestrator.answer("Muestrame el historial de transacciones del cliente 1.")
+
+        self.assertEqual(result["agent_selected"], "transactional")
+        self.assertEqual(result["trace"]["delegated_agent"], "TransactionalAgent")
+        self.assertEqual(historical_memory_tool.search_calls, [])
+        self.assertEqual(transactional_agent.calls[0]["question"], "Muestrame el historial de transacciones del cliente 1.")
+
+    def test_previous_transactional_question_routes_to_historical_summary(self):
+        transactional_agent = FakeTransactionalAgent()
+        summarizer_agent = FakeSummarizerAgent()
+        historical_memory_tool = FakeHistoricalMemoryTool(
+            formatted_context=(
+                "[Historial 1 | Sesion: old | Agente: transactional]\n"
+                "Usuario: Existen transacciones sospechosas?\n"
+                "Asistente: Se revisaron casos de fraude via MCP."
+            )
+        )
+        orchestrator = OrchestratorAgent(
+            rag_agent=FakeRAGAgent(),
+            summarizer_agent=summarizer_agent,
+            web_search_agent=FakeWebSearchAgent(),
+            transactional_agent=transactional_agent,
+            llm_client=FakeDecisionLLM("transactional"),
+            historical_memory_tool=historical_memory_tool,
+        )
+
+        result = orchestrator.answer("Ya habiamos consultado transacciones sospechosas hoy?")
+
+        self.assertEqual(result["agent_selected"], "summary")
+        self.assertEqual(result["trace"]["delegated_agent"], "SummarizerAgent")
+        self.assertEqual(result["trace"]["historical_memory"]["queried"], True)
+        self.assertEqual(result["trace"]["historical_memory"]["matches"], 1)
+        self.assertEqual(transactional_agent.calls, [])
+        self.assertIn("transacciones sospechosas", summarizer_agent.calls[0]["conversation_context"])
+
+    def test_other_sessions_question_uses_historical_memory(self):
+        summarizer_agent = FakeSummarizerAgent()
+        historical_memory_tool = FakeHistoricalMemoryTool(
+            formatted_context=(
+                "[Historial 1 | Sesion: old | Agente: rag]\n"
+                "Usuario: Que es una CNN?\n"
+                "Asistente: Una CNN es una red neuronal convolucional."
+            )
+        )
+        orchestrator = OrchestratorAgent(
+            rag_agent=FakeRAGAgent(),
+            summarizer_agent=summarizer_agent,
+            web_search_agent=FakeWebSearchAgent(),
+            llm_client=FakeDecisionLLM("rag"),
+            historical_memory_tool=historical_memory_tool,
+        )
+
+        result = orchestrator.answer("que he preguntado en otras sesiones sobre cnn")
+
+        self.assertEqual(result["agent_selected"], "summary")
+        self.assertEqual(result["trace"]["historical_memory"]["queried"], True)
+        self.assertEqual(result["trace"]["historical_memory"]["scope"], "global")
+        self.assertEqual(historical_memory_tool.search_calls[0]["session_id"], None)
+        self.assertIn("Que es una CNN?", summarizer_agent.calls[0]["conversation_context"])
+
+    def test_historical_memory_failure_does_not_break_rag_route(self):
+        rag_agent = FakeRAGAgent()
+        orchestrator = OrchestratorAgent(
+            rag_agent=rag_agent,
+            summarizer_agent=FakeSummarizerAgent(),
+            web_search_agent=FakeWebSearchAgent(),
+            llm_client=FakeDecisionLLM("rag"),
+            historical_memory_tool=FailingHistoricalMemoryTool(),
+        )
+
+        result = orchestrator.answer("Que es una red neuronal?", session_id="session-a")
+
+        self.assertEqual(result["agent_selected"], "rag")
+        self.assertEqual(result["answer"], "Respuesta desde RAG.")
+        self.assertEqual(result["trace"]["historical_memory"]["updated"], False)
+        self.assertIn("historical save unavailable", result["trace"]["historical_memory"]["error"])
+        self.assertEqual(rag_agent.questions, ["Que es una red neuronal?"])
+
+    def test_historical_memory_lookup_failure_does_not_break_summary_route(self):
+        summarizer_agent = FakeSummarizerAgent()
+        orchestrator = OrchestratorAgent(
+            rag_agent=FakeRAGAgent(),
+            summarizer_agent=summarizer_agent,
+            web_search_agent=FakeWebSearchAgent(),
+            llm_client=FakeDecisionLLM("rag"),
+            historical_memory_tool=FailingHistoricalMemoryTool(),
+        )
+
+        result = orchestrator.answer("Que pregunte anteriormente sobre CNN?")
+
+        self.assertEqual(result["agent_selected"], "summary")
+        self.assertEqual(result["trace"]["historical_memory"]["queried"], True)
+        self.assertEqual(result["trace"]["historical_memory"]["available"], False)
+        self.assertIn("historical search unavailable", result["trace"]["historical_memory"]["error"])
+        self.assertEqual(summarizer_agent.calls[0]["conversation_context"], "")
 
     def test_routes_to_summary_when_user_asks_for_session_summary(self):
         memory_tool = MemoryTool(memory=ConversationalMemory())

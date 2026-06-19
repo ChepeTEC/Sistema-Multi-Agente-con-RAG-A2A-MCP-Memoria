@@ -31,7 +31,7 @@ interface BackendTrace {
 }
 
 interface BackendChatResponse {
-  agent_selected: "rag" | "web";
+  agent_selected: "rag" | "summary" | "transactional" | "web";
   decision_reason: string;
   answer: string;
   sources: BackendSource[];
@@ -119,6 +119,16 @@ function buildToolCalls(response: BackendChatResponse): ToolCall[] {
   if (response.agent_selected === "rag") {
     tools.push({
       name: "rag_agent.answer",
+      args: { sources: response.sources.length },
+    });
+  } else if (response.agent_selected === "transactional") {
+    tools.push({
+      name: "transactional_agent.answer",
+      args: { sources: response.sources.length },
+    });
+  } else if (response.agent_selected === "summary") {
+    tools.push({
+      name: "summarizer_agent.answer",
       args: { sources: response.sources.length },
     });
   } else {

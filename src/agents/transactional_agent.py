@@ -75,6 +75,7 @@ class TransactionalAgent:
         )
 
         started_at = perf_counter()
+        tool_calls_trace = []
 
         try:
             # 3. Abrimos el canal seguro de comunicación con el Servidor MCP (Postgres)
@@ -126,6 +127,11 @@ class TransactionalAgent:
                         # El Servidor MCP procesa de forma segura la consulta en la BD
                         resultado_mcp = await session.call_tool(tool_name, tool_args)
                         resultado_texto = resultado_mcp.content[0].text if resultado_mcp.content else "{}"
+                        tool_calls_trace.append({
+                            "name": tool_name,
+                            "args": dict(tool_args),
+                            "result_preview": resultado_texto[:1000],
+                        })
 
                         # Le devolvemos el resultado (enmascarado) a Gemini para que continúe razonando
                         response = chat.send_message(
@@ -149,6 +155,7 @@ class TransactionalAgent:
                         "provider": "google",
                         "model": self.llm_client.model,
                     },
+                    "mcp_tools": tool_calls_trace,
                 },
             }
 
@@ -193,9 +200,9 @@ class TransactionalAgent:
         "REGLAS OBLIGATORIAS DE OPERACIÓN (RÚBRICA DE EVALUACIÓN):\n"
         "1. JUSTIFICACIÓN OBLIGATORIA: Toda llamada que realices al Servidor MCP debe incluir el argumento 'justificacion' detallando exactamente por qué necesitas consultar o procesar esos datos.\n"
         "2. CONSULTAS ACOTADAS (NO MASIVAS): Tienes prohibido realizar consultas masivas a la base de datos sin aplicar filtros. Debes especificar siempre parámetros de búsqueda claros (como cliente_id o transaccion_id) para evitar saturaciones.\n"
-        "3. RANGOS DE FECHAS EN HISTÓRICOS: Si necesitas realizar búsquedas de transacciones históricas, debes autolimitarte obligatoriamente aplicando un rango de fechas específico en los parámetros.\n"
+        "3. RANGOS DE FECHAS EN HISTÓRICOS: Si necesitas realizar búsquedas de transacciones históricas amplias, debes autolimitarte aplicando un rango de fechas específico en los parámetros. Si el usuario pide transacciones generales, recientes o últimas transacciones de un cliente concreto, puedes llamar search_transactions usando solo cliente_id y justificacion porque la herramienta ya limita a 50 filas.\n"
         "4. EXPLICACIÓN DE CONCLUSIONES: En tu respuesta final al usuario, debes explicar de manera clara y explícita qué datos exactos extraídos de la base de datos utilizaste para llegar a tu conclusión.\n"
-        "5. PROHIBIDO MODIFICAR: Tu acceso es estrictamente de lectura para análisis y de escritura únicamente para creación de alertas. NUNCA intentes ni solicites modificar transacciones existentes.\n"
+        "5. PROHIBIDO MODIFICAR: Tu acceso es estrictamente de lectura para análisis y de escritura únicamente para creación de alertas. NUNCA intentes ni solicites modificar transacciones existentes. Usa create_fraud_case solo si el usuario pide explicitamente abrir/crear un caso de fraude o si solicita una auditoria de fraude con instruccion clara de actuar ante una anomalia. Para solicitudes de mostrar, listar, consultar o analizar, NO abras casos; reporta hallazgos y recomienda revision humana si corresponde.\n"
        "6. CERO ALUCINACIONES Y REPORTE OBLIGATORIO: NUNCA inventes transacciones, montos o casos de fraude. Si el usuario te pide buscar anomalías y NO las encuentras (o la base de datos está vacía), TIENES PROHIBIDO responder solo con frases cortas como 'Análisis completado'. En su lugar, DEBES redactar un reporte que incluya:\n"
 "   - Qué herramientas usaste.\n"
 "   - Qué datos reales obtuviste (ej. 'Revisé 5 transacciones y el monto máximo fue X').\n"
@@ -212,6 +219,7 @@ class TransactionalAgent:
 "1. Qué cliente auditaste y qué herramientas usaste.\n"
 "2. Los valores matemáticos encontrados (ej. promedios, límites).\n"
 "3. La conclusión final de la auditoría.\n"
+"Si el usuario pregunta por patrones sospechosos o fraude sin indicar cliente_id, no consultes transacciones masivamente; usa get_fraud_case_summary con una ventana temporal acotada para responder con los casos ya registrados y sus patrones agregados.\n"
 "¡NO respondes con frases cortas bajo ninguna circunstancia!"
     )
     
