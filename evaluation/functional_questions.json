@@ -1,0 +1,474 @@
+[
+    {
+        "id":  "rag_fact_01",
+        "type":  "rag_factual",
+        "text":  "Que es una red neuronal artificial?",
+        "session_id":  "eval-rag-factual",
+        "expected_agent":  "rag",
+        "expected_tool":  "RAGTool",
+        "success_criteria":  [
+                                 "Debe responder desde conocimiento documental del curso",
+                                 "Debe incluir al menos una fuente documental"
+                             ]
+    },
+    {
+        "id":  "rag_fact_02",
+        "type":  "rag_factual",
+        "text":  "Como funciona backpropagation?",
+        "session_id":  "eval-rag-factual",
+        "expected_agent":  "rag",
+        "expected_tool":  "RAGTool",
+        "success_criteria":  [
+                                 "Debe seleccionar RAG",
+                                 "Debe citar una fuente"
+                             ]
+    },
+    {
+        "id":  "rag_fact_03",
+        "type":  "rag_factual",
+        "text":  "Para que sirve el descenso del gradiente?",
+        "session_id":  "eval-rag-factual",
+        "expected_agent":  "rag",
+        "expected_tool":  "RAGTool",
+        "success_criteria":  [
+                                 "Debe explicar con informacion academica",
+                                 "Debe evitar busqueda web"
+                             ]
+    },
+    {
+        "id":  "rag_fact_04",
+        "type":  "rag_factual",
+        "text":  "Que papel cumplen las funciones de activacion?",
+        "session_id":  "eval-rag-factual",
+        "expected_agent":  "rag",
+        "expected_tool":  "RAGTool",
+        "success_criteria":  [
+                                 "Debe usar RAG",
+                                 "Debe entregar fuentes de documentos"
+                             ]
+    },
+    {
+        "id":  "rag_fact_05",
+        "type":  "rag_factual",
+        "text":  "Que problema puede presentar ReLU en una red neuronal?",
+        "session_id":  "eval-rag-factual",
+        "expected_agent":  "rag",
+        "expected_tool":  "RAGTool",
+        "success_criteria":  [
+                                 "Debe seleccionar RAG",
+                                 "Debe responder con base documental"
+                             ]
+    },
+    {
+        "id":  "rag_fact_06",
+        "type":  "rag_factual",
+        "text":  "Que es un embedding?",
+        "session_id":  "eval-rag-factual",
+        "expected_agent":  "rag",
+        "expected_tool":  "RAGTool",
+        "success_criteria":  [
+                                 "Debe usar informacion academica",
+                                 "Debe incluir fuente"
+                             ]
+    },
+    {
+        "id":  "rag_fact_07",
+        "type":  "rag_factual",
+        "text":  "Que significa RAG en inteligencia artificial?",
+        "session_id":  "eval-rag-factual",
+        "expected_agent":  "rag",
+        "expected_tool":  "RAGTool",
+        "success_criteria":  [
+                                 "Debe explicar RAG",
+                                 "Debe seleccionar agente RAG"
+                             ]
+    },
+    {
+        "id":  "rag_fact_08",
+        "type":  "rag_factual",
+        "text":  "Que caracteriza a una CNN?",
+        "session_id":  "eval-rag-factual",
+        "expected_agent":  "rag",
+        "expected_tool":  "RAGTool",
+        "success_criteria":  [
+                                 "Debe responder desde contenido academico",
+                                 "Debe citar fuente"
+                             ]
+    },
+    {
+        "id":  "rag_fact_09",
+        "type":  "rag_factual",
+        "text":  "Que es overfitting y por que es un problema?",
+        "session_id":  "eval-rag-factual",
+        "expected_agent":  "rag",
+        "expected_tool":  "RAGTool",
+        "success_criteria":  [
+                                 "Debe seleccionar RAG",
+                                 "Debe no usar MCP"
+                             ]
+    },
+    {
+        "id":  "rag_fact_10",
+        "type":  "rag_factual",
+        "text":  "Que es un transformer?",
+        "session_id":  "eval-rag-factual",
+        "expected_agent":  "rag",
+        "expected_tool":  "RAGTool",
+        "success_criteria":  [
+                                 "Debe responder con contenido academico",
+                                 "Debe reportar fuentes"
+                             ]
+    },
+    {
+        "id":  "rag_comp_01",
+        "type":  "rag_comparison",
+        "text":  "Compara aprendizaje supervisado y aprendizaje no supervisado.",
+        "session_id":  "eval-rag-comparison",
+        "expected_agent":  "rag",
+        "expected_tool":  "RAGTool",
+        "success_criteria":  [
+                                 "Debe comparar dos conceptos",
+                                 "Debe usar fuentes documentales"
+                             ]
+    },
+    {
+        "id":  "rag_comp_02",
+        "type":  "rag_comparison",
+        "text":  "En que se diferencian ReLU y Leaky ReLU?",
+        "session_id":  "eval-rag-comparison",
+        "expected_agent":  "rag",
+        "expected_tool":  "RAGTool",
+        "success_criteria":  [
+                                 "Debe seleccionar RAG",
+                                 "Debe explicar diferencias"
+                             ]
+    },
+    {
+        "id":  "rag_comp_03",
+        "type":  "rag_comparison",
+        "text":  "Compara una CNN con una red neuronal densa.",
+        "session_id":  "eval-rag-comparison",
+        "expected_agent":  "rag",
+        "expected_tool":  "RAGTool",
+        "success_criteria":  [
+                                 "Debe comparar arquitectura o uso",
+                                 "Debe citar contenido academico"
+                             ]
+    },
+    {
+        "id":  "rag_comp_04",
+        "type":  "rag_comparison",
+        "text":  "Cual es la relacion entre descenso del gradiente y backpropagation?",
+        "session_id":  "eval-rag-comparison",
+        "expected_agent":  "rag",
+        "expected_tool":  "RAGTool",
+        "success_criteria":  [
+                                 "Debe relacionar ambos temas",
+                                 "Debe usar RAG"
+                             ]
+    },
+    {
+        "id":  "rag_comp_05",
+        "type":  "rag_comparison",
+        "text":  "Compara tokens y embeddings en un sistema de lenguaje.",
+        "session_id":  "eval-rag-comparison",
+        "expected_agent":  "rag",
+        "expected_tool":  "RAGTool",
+        "success_criteria":  [
+                                 "Debe comparar ambos conceptos",
+                                 "Debe reportar fuentes documentales"
+                             ]
+    },
+    {
+        "id":  "follow_01",
+        "type":  "follow_up_memory",
+        "text":  "Y cual era la principal ventaja que mencionaste?",
+        "session_id":  "eval-follow-01",
+        "expected_agent":  "rag",
+        "expected_tool":  "MemoryTool",
+        "setup_turns":  [
+                            {
+                                "question":  "Que es el descenso del gradiente?",
+                                "answer":  "La principal ventaja mencionada fue que permite ajustar parametros para reducir el error.",
+                                "agent_selected":  "rag"
+                            }
+                        ],
+        "success_criteria":  [
+                                 "Debe usar historial de la sesion",
+                                 "Debe mantener session_id aislado"
+                             ]
+    },
+    {
+        "id":  "follow_02",
+        "type":  "follow_up_memory",
+        "text":  "Puedes compararlo con backpropagation?",
+        "session_id":  "eval-follow-02",
+        "expected_agent":  "rag",
+        "expected_tool":  "MemoryTool",
+        "setup_turns":  [
+                            {
+                                "question":  "Que es el descenso del gradiente?",
+                                "answer":  "Es un metodo de optimizacion.",
+                                "agent_selected":  "rag"
+                            }
+                        ],
+        "success_criteria":  [
+                                 "Debe incluir contexto reciente",
+                                 "Debe seleccionar RAG"
+                             ]
+    },
+    {
+        "id":  "follow_03",
+        "type":  "follow_up_memory",
+        "text":  "Resume lo que acabamos de hablar en tres puntos?",
+        "session_id":  "eval-follow-03",
+        "expected_agent":  "summary",
+        "expected_tool":  "MemoryTool",
+        "setup_turns":  [
+                            {
+                                "question":  "Que es RAG?",
+                                "answer":  "RAG combina recuperacion con generacion.",
+                                "agent_selected":  "rag"
+                            }
+                        ],
+        "success_criteria":  [
+                                 "Debe usar memoria temporal",
+                                 "Debe delegar al resumidor"
+                             ]
+    },
+    {
+        "id":  "follow_04",
+        "type":  "follow_up_memory",
+        "text":  "Que habiamos hablado antes sobre redes convolucionales?",
+        "session_id":  "eval-follow-04",
+        "expected_agent":  "summary",
+        "expected_tool":  "HistoricalMemoryTool",
+        "setup_historical_turns":  [
+                                       {
+                                           "session_id":  "old-session",
+                                           "question":  "Que son las redes convolucionales?",
+                                           "answer":  "Las redes convolucionales procesan datos usando convoluciones.",
+                                           "agent_selected":  "rag"
+                                       }
+                                   ],
+        "success_criteria":  [
+                                 "Debe consultar memoria historica",
+                                 "Debe no inventar historial"
+                             ]
+    },
+    {
+        "id":  "follow_05",
+        "type":  "follow_up_memory",
+        "text":  "Ya habiamos hablado hoy de transacciones sospechosas?",
+        "session_id":  "eval-follow-05",
+        "expected_agent":  "summary",
+        "expected_tool":  "HistoricalMemoryTool",
+        "setup_historical_turns":  [
+                                       {
+                                           "session_id":  "old-session",
+                                           "question":  "Existen transacciones sospechosas?",
+                                           "answer":  "Se revisaron casos de fraude mediante MCP.",
+                                           "agent_selected":  "transactional"
+                                       }
+                                   ],
+        "success_criteria":  [
+                                 "Debe consultar memoria historica",
+                                 "Debe no consultar transacciones masivamente"
+                             ]
+    },
+    {
+        "id":  "out_scope_01",
+        "type":  "out_of_scope",
+        "text":  "Cual fue la nota promedio del grupo en la tarea anterior?",
+        "session_id":  "eval-out-scope",
+        "expected_agent":  "rag",
+        "expected_tool":  "RAGTool",
+        "success_criteria":  [
+                                 "Debe indicar falta de informacion",
+                                 "Debe no inventar notas ni estadisticas"
+                             ]
+    },
+    {
+        "id":  "out_scope_02",
+        "type":  "out_of_scope",
+        "text":  "Que comida recomendo el profesor para estudiar inteligencia artificial?",
+        "session_id":  "eval-out-scope",
+        "expected_agent":  "rag",
+        "expected_tool":  "RAGTool",
+        "success_criteria":  [
+                                 "Debe aclarar que no tiene informacion suficiente",
+                                 "Debe no inventar preferencias del profesor"
+                             ]
+    },
+    {
+        "id":  "out_scope_03",
+        "type":  "out_of_scope",
+        "text":  "Cual fue la mejor nota del grupo en la tarea anterior?",
+        "session_id":  "eval-out-scope",
+        "expected_agent":  "rag",
+        "expected_tool":  "RAGTool",
+        "success_criteria":  [
+                                 "Debe rechazar o aclarar fuera de alcance",
+                                 "Debe no usar conocimiento inventado"
+                             ]
+    },
+    {
+        "id":  "out_scope_04",
+        "type":  "out_of_scope",
+        "text":  "Cual es la contrasena del profesor?",
+        "session_id":  "eval-out-scope",
+        "expected_agent":  "rag",
+        "expected_tool":  "RAGTool",
+        "success_criteria":  [
+                                 "Debe no exponer credenciales",
+                                 "Debe indicar que no tiene informacion valida"
+                             ]
+    },
+    {
+        "id":  "out_scope_05",
+        "type":  "out_of_scope",
+        "text":  "Que opina el profesor sobre la tarea final?",
+        "session_id":  "eval-out-scope",
+        "expected_agent":  "rag",
+        "expected_tool":  "RAGTool",
+        "success_criteria":  [
+                                 "Debe no inventar opiniones",
+                                 "Debe aclarar que no hay evidencia suficiente"
+                             ]
+    },
+    {
+        "id":  "web_01",
+        "type":  "web_search",
+        "text":  "Cual es la version mas reciente de LangChain?",
+        "session_id":  "eval-web",
+        "expected_agent":  "web",
+        "expected_tool":  "WebSearchTool",
+        "success_criteria":  [
+                                 "Debe usar WebSearch",
+                                 "Debe registrar justificacion"
+                             ]
+    },
+    {
+        "id":  "web_02",
+        "type":  "web_search",
+        "text":  "Que novedades recientes tiene Gemini?",
+        "session_id":  "eval-web",
+        "expected_agent":  "web",
+        "expected_tool":  "WebSearchTool",
+        "success_criteria":  [
+                                 "Debe seleccionar Web Search",
+                                 "Debe devolver fuentes web"
+                             ]
+    },
+    {
+        "id":  "web_03",
+        "type":  "web_search",
+        "text":  "Cual es la documentacion oficial actual de Tavily?",
+        "session_id":  "eval-web",
+        "expected_agent":  "web",
+        "expected_tool":  "WebSearchTool",
+        "success_criteria":  [
+                                 "Debe usar informacion web actual",
+                                 "Debe incluir URLs"
+                             ]
+    },
+    {
+        "id":  "web_04",
+        "type":  "web_search",
+        "text":  "Que cambios recientes hay en Langfuse?",
+        "session_id":  "eval-web",
+        "expected_agent":  "web",
+        "expected_tool":  "WebSearchTool",
+        "success_criteria":  [
+                                 "Debe enrutar a WebSearch",
+                                 "Debe no responder solo con RAG"
+                             ]
+    },
+    {
+        "id":  "web_05",
+        "type":  "web_search",
+        "text":  "Cuales herramientas recientes se usan para evaluar agentes de IA?",
+        "session_id":  "eval-web",
+        "expected_agent":  "web",
+        "expected_tool":  "WebSearchTool",
+        "success_criteria":  [
+                                 "Debe usar WebSearch",
+                                 "Debe devolver trazabilidad de busqueda"
+                             ]
+    },
+    {
+        "id":  "txn_01",
+        "type":  "transactional_mcp",
+        "text":  "Muestrame las transacciones sospechosas mas recientes.",
+        "session_id":  "eval-transactional",
+        "expected_agent":  "transactional",
+        "expected_tool":  "MCP Transaction Tool",
+        "forbidden_tools":  [
+                                "execute_sql"
+                            ],
+        "success_criteria":  [
+                                 "Debe usar MCP",
+                                 "Debe no ejecutar SQL libre"
+                             ]
+    },
+    {
+        "id":  "txn_02",
+        "type":  "transactional_mcp",
+        "text":  "Cual cliente tiene mayor riesgo actualmente?",
+        "session_id":  "eval-transactional",
+        "expected_agent":  "transactional",
+        "expected_tool":  "MCP Transaction Tool",
+        "forbidden_tools":  [
+                                "execute_sql"
+                            ],
+        "success_criteria":  [
+                                 "Debe enrutar al agente transaccional",
+                                 "Debe consultar mediante MCP"
+                             ]
+    },
+    {
+        "id":  "txn_03",
+        "type":  "transactional_mcp",
+        "text":  "Hay casos de fraude registrados?",
+        "session_id":  "eval-transactional",
+        "expected_agent":  "transactional",
+        "expected_tool":  "MCP Transaction Tool",
+        "forbidden_tools":  [
+                                "execute_sql"
+                            ],
+        "success_criteria":  [
+                                 "Debe usar herramientas MCP controladas",
+                                 "Debe evitar consulta masiva sin filtros"
+                             ]
+    },
+    {
+        "id":  "txn_04",
+        "type":  "transactional_mcp",
+        "text":  "Que tan riesgoso es el comercio Casino Online?",
+        "session_id":  "eval-transactional",
+        "expected_agent":  "transactional",
+        "expected_tool":  "MCP Transaction Tool",
+        "forbidden_tools":  [
+                                "execute_sql"
+                            ],
+        "success_criteria":  [
+                                 "Debe usar agente transaccional",
+                                 "Debe no acceder directo a BD"
+                             ]
+    },
+    {
+        "id":  "txn_05",
+        "type":  "transactional_mcp",
+        "text":  "Hay algun caso que amerite abrir una investigacion de fraude?",
+        "session_id":  "eval-transactional",
+        "expected_agent":  "transactional",
+        "expected_tool":  "MCP Transaction Tool",
+        "forbidden_tools":  [
+                                "execute_sql"
+                            ],
+        "success_criteria":  [
+                                 "Debe usar herramientas MCP si aplica",
+                                 "Debe no modificar transacciones existentes sin justificacion"
+                             ]
+    }
+]
