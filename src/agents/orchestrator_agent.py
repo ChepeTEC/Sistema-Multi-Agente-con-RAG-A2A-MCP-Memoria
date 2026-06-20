@@ -1,5 +1,6 @@
 from time import perf_counter
 from collections.abc import Callable
+from copy import deepcopy
 import unicodedata
 from src.agents.rag_agent import RAGAgent
 from src.agents.summarizer_agent import SummarizerAgent
@@ -25,6 +26,88 @@ class OrchestratorAgent:
 
     AGENT_NAME = "OrchestratorAgent"
     VALID_AGENTS = {"rag", "summary", "transactional", "web"}
+    CONTRACT = {
+        "agent_name": AGENT_NAME,
+        "description": (
+            "Agente coordinador que recibe la pregunta del usuario, decide el "
+            "agente especializado a utilizar, integra memoria conversacional e "
+            "historica y construye una respuesta trazable."
+        ),
+        "role": "Orquestador central del sistema multi-agente.",
+        "allowed_agents": sorted(VALID_AGENTS),
+        "allowed_tools": [
+            "MemoryTool",
+            "HistoricalMemoryTool",
+            "RAGAgent",
+            "WebSearchAgent",
+            "SummarizerAgent",
+            "TransactionalAgent",
+        ],
+        "inputs": {
+            "question": {
+                "type": "str",
+                "required": True,
+                "description": "Pregunta o instruccion enviada por el usuario.",
+            },
+            "session_id": {
+                "type": "str | None",
+                "required": False,
+                "description": (
+                    "Identificador de sesion usado para memoria temporal e "
+                    "historica. Si no se recibe, se usa 'default'."
+                ),
+            },
+        },
+        "outputs": {
+            "agent_selected": "Agente elegido: rag, summary, transactional o web.",
+            "decision_reason": "Justificacion textual de la decision de ruteo.",
+            "answer": "Respuesta final generada por el agente delegado.",
+            "sources": "Fuentes usadas por el agente delegado, si aplica.",
+            "trace": (
+                "Datos de trazabilidad: pregunta, sesion, decision, memoria, "
+                "modelo usado, latencias y trace del agente delegado."
+            ),
+        },
+        "restrictions": [
+            "No consulta directamente la base vectorial ni la base transaccional.",
+            "Debe delegar cada tarea al agente especializado correspondiente.",
+            "Debe preferir RAG cuando la decision sea ambigua.",
+            "Debe usar Web Search solo ante solicitud explicita o necesidad justificada de informacion externa/reciente.",
+            "Debe enrutar consultas financieras o transaccionales al agente transaccional.",
+            "Debe mantener separada la memoria temporal por session_id.",
+            "Debe registrar trazas de validacion, decision, agente delegado y memoria.",
+        ],
+        "example_calls": [
+            {
+                "input": {
+                    "question": "Que es backpropagation segun los apuntes?",
+                    "session_id": "demo-rag",
+                },
+                "expected_agent": "rag",
+            },
+            {
+                "input": {
+                    "question": "Busca informacion actual sobre Gemini API.",
+                    "session_id": "demo-web",
+                },
+                "expected_agent": "web",
+            },
+            {
+                "input": {
+                    "question": "Resume lo que hemos hablado en esta sesion.",
+                    "session_id": "demo-summary",
+                },
+                "expected_agent": "summary",
+            },
+            {
+                "input": {
+                    "question": "Analiza las transacciones del cliente 1.",
+                    "session_id": "demo-mcp",
+                },
+                "expected_agent": "transactional",
+            },
+        ],
+    }
 
     def __init__(
         self,
@@ -314,6 +397,10 @@ class OrchestratorAgent:
         finally:
             langfuse_tracer.close_trace(trace)
             langfuse_tracer.flush()
+
+    @classmethod
+    def get_contract(cls) -> dict:
+        return deepcopy(cls.CONTRACT)
 
     def _decide_agent(self, question: str, conversation_context: str = "") -> dict:
         decision_started_at = perf_counter()

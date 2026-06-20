@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 
 from src.agents.web_search_agent import WebSearchAgent
 
@@ -23,6 +24,36 @@ class FakeWebSearchTool:
             "duration_ms": 12.5
         }
 
+class FakeLangfuseTracer:
+    def __init__(self):
+        self.calls = []
+        self.trace = {"observation": object(), "closed": False}
+
+    def create_trace(self, **kwargs):
+        self.calls.append(("create_trace", kwargs))
+        return self.trace
+
+    def create_span(self, **kwargs):
+        self.calls.append(("create_span", kwargs))
+        return object()
+
+    def create_generation(self, **kwargs):
+        self.calls.append(("create_generation", kwargs))
+        return object()
+
+    def update_trace_output(self, trace, output_data):
+        self.calls.append(("update_trace_output", {"trace": trace, "output_data": output_data}))
+
+    def close_trace(self, trace):
+        self.calls.append(("close_trace", {"trace": trace}))
+
+    def flush(self):
+        self.calls.append(("flush", {}))
+
+
+class FailingWebSearchTool:
+    def search(self, **kwargs):
+        raise RuntimeError("web search unavailable")
 
 class FakeLLMClient:
     def generate(self, **kwargs):
@@ -105,6 +136,61 @@ class WebSearchAgentTests(unittest.TestCase):
         self.assertLessEqual(len(tool.kwargs["query"]), agent.MAX_SEARCH_QUERY_CHARS)
         self.assertTrue(tool.kwargs["query"].startswith("consulta consulta"))
 
+    def test_records_langfuse_trace_span_generation_and_output(self):
+        tracer = FakeLangfuseTracer()
+        agent = WebSearchAgent(
+            web_search_tool=FakeWebSearchTool(),
+            llm_client=FakeLLMClient(),
+        )
+
+        with patch("src.agents.web_search_agent.langfuse_tracer", tracer):
+            result = agent.answer(
+                question="Busca informacion reciente",
+                justification="El usuario solicito una busqueda web justificada.",
+            )
+
+        call_names = [name for name, _ in tracer.calls]
+        self.assertIn("create_trace", call_names)
+        self.assertIn("create_span", call_names)
+        self.assertIn("create_generation", call_names)
+        self.assertIn("update_trace_output", call_names)
+        self.assertIn("close_trace", call_names)
+        self.assertIn("flush", call_names)
+
+        search_span = next(
+            kwargs for name, kwargs in tracer.calls
+            if name == "create_span" and kwargs["name"] == "web_search_tool_call"
+        )
+        self.assertEqual(search_span["output_data"]["results_count"], 1)
+        self.assertEqual(search_span["metadata"]["urls"], ["https://example.com/article"])
+
+        generation = next(kwargs for name, kwargs in tracer.calls if name == "create_generation")
+        self.assertEqual(generation["name"], "web_search_generation")
+        self.assertEqual(generation["model"], "test-model")
+        self.assertIn("Fuente 1", generation["prompt"])
+        self.assertEqual(generation["response"], result["answer"])
+
+    def test_records_langfuse_error_span_when_search_fails(self):
+        tracer = FakeLangfuseTracer()
+        agent = WebSearchAgent(
+            web_search_tool=FailingWebSearchTool(),
+            llm_client=FakeLLMClient(),
+        )
+
+        with patch("src.agents.web_search_agent.langfuse_tracer", tracer):
+            with self.assertRaisesRegex(RuntimeError, "web search unavailable"):
+                agent.answer(
+                    question="Busca informacion reciente",
+                    justification="El usuario solicito una busqueda web justificada.",
+                )
+
+        error_span = next(
+            kwargs for name, kwargs in tracer.calls
+            if name == "create_span" and kwargs["name"] == "web_search_agent_error"
+        )
+        self.assertIn("web search unavailable", error_span["output_data"]["error"])
+        self.assertIn("close_trace", [name for name, _ in tracer.calls])
+        self.assertIn("flush", [name for name, _ in tracer.calls])
 
 if __name__ == "__main__":
     unittest.main()
