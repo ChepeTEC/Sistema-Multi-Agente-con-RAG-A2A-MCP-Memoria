@@ -170,12 +170,12 @@
     {
         "id":  "rag_comp_05",
         "type":  "rag_comparison",
-        "text":  "Compara tokens y embeddings en un sistema de lenguaje.",
+        "text":  "Compara pooling y convolucion en una CNN.",
         "session_id":  "eval-rag-comparison",
         "expected_agent":  "rag",
         "expected_tool":  "RAGTool",
         "success_criteria":  [
-                                 "Debe comparar ambos conceptos",
+                                 "Debe comparar ambos componentes de una CNN",
                                  "Debe reportar fuentes documentales"
                              ]
     },
@@ -220,7 +220,7 @@
     {
         "id":  "follow_03",
         "type":  "follow_up_memory",
-        "text":  "Resume lo que acabamos de hablar en tres puntos?",
+        "text":  "Resume lo que acabamos de hablar en tres puntos",
         "session_id":  "eval-follow-03",
         "expected_agent":  "summary",
         "expected_tool":  "MemoryTool",
