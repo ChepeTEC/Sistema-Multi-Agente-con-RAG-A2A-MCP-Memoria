@@ -1,13 +1,5 @@
 # Fdb version 4
-["bibtex main"] 1781140136.43055 "main.aux" "main.bbl" "main" 1781140479.78704 0
-  "./references.bib" 1781155626 2184 48ceae03079458a08179425f6c0f7acc ""
-  "C:/Users/Emmanuel/AppData/Local/Programs/MiKTeX/bibtex/bst/ieeetran/IEEEtran.bst" 1440622569 57748 7c8250ecf02814ce6ddc0cdbb63df1dd ""
-  "main.aux" 1781140478 2962 4569f05a0435b019906c3294cf2c63c1 "pdflatex"
-  (generated)
-  "main.bbl"
-  "main.blg"
-  (rewritten before read)
-["pdflatex"] 1781140477.33749 "c:/Users/Emmanuel/Desktop/TEC/Ing. Computación/2026/Vll Semestre/Inteligencia Artificial/Tarea 4 y 5/Sistema-Multi-Agente-con-RAG-A2A-MCP-Memoria/documentation/main.tex" "main.pdf" "main" 1781140479.78789 0
+["pdflatex"] 1782185079.12499 "c:/Users/Emmanuel/Desktop/TEC/Ing. Computación/2026/Vll Semestre/Inteligencia Artificial/Tarea 4 y 5/Sistema-Multi-Agente-con-RAG-A2A-MCP-Memoria/documentation/main.tex" "main.pdf" "main" 1782185081.63439 0
   "C:/Users/Emmanuel/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map" 1781135953 82507 a9eef8696c92627b87e9975edea03b2a ""
   "C:/Users/Emmanuel/AppData/Local/MiKTeX/miktex/data/le/pdftex/pdflatex.fmt" 1768275594 13334939 f27988760f8f9edf503c5b42d277ab97 ""
   "C:/Users/Emmanuel/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/base/8r.enc" 1458473887 4993 80dc9bab7f31fb78a000ccfed0e27cab ""
@@ -82,13 +74,15 @@
   "C:/Users/Emmanuel/AppData/Local/Programs/MiKTeX/tex/latex/psnfss/t1pcr.fd" 1585253778 835 d5895e9edc628f2be019beb2c0ec66df ""
   "C:/Users/Emmanuel/AppData/Local/Programs/MiKTeX/tex/latex/psnfss/t1ptm.fd" 1585253778 817 61d7da1e9f9e74989b196d147e623736 ""
   "C:/Users/Emmanuel/AppData/Local/Programs/MiKTeX/tex/latex/url/url.sty" 1388490452 12796 8edb7d69a20b857904dd0ea757c14ec9 ""
-  "c:/Users/Emmanuel/Desktop/TEC/Ing. Computación/2026/Vll Semestre/Inteligencia Artificial/Tarea 4 y 5/Sistema-Multi-Agente-con-RAG-A2A-MCP-Memoria/documentation/main.tex" 1781140476 17012 2ed6b2def3f1a83990cb2b95be8b4e6d ""
+  "c:/Users/Emmanuel/Desktop/TEC/Ing. Computación/2026/Vll Semestre/Inteligencia Artificial/Tarea 4 y 5/Sistema-Multi-Agente-con-RAG-A2A-MCP-Memoria/documentation/main.tex" 1782185078 39022 490f9836bd476bba2d095dd41227370a ""
   "figures/ArquitecturaGeneral.png" 1781155626 207568 df06998355a34b672f8851aaac2b7cd6 ""
   "figures/ArquitecturaOrquestador.png" 1781155626 207568 df06998355a34b672f8851aaac2b7cd6 ""
   "figures/DiagramaArquitecturaSeguraMCP.png" 1781139588 33760 93a9b4ab37866ea37f93d632e3120b97 ""
-  "main.aux" 1781140478 2962 4569f05a0435b019906c3294cf2c63c1 "pdflatex"
-  "main.bbl" 1781140136 2666 ec4eb8838db154d6fc54284a4c3cc5db "bibtex main"
-  "main.tex" 1781140476 17012 2ed6b2def3f1a83990cb2b95be8b4e6d ""
+  "figures/langfuse_rag_trace_detail.png" 1782181695 78405 0ab5b4116297872bb5b1088b33157bb2 ""
+  "figures/langfuse_traces_overview.png" 1782181695 228834 56900cbc5dacb92e1792205d10df1f8f ""
+  "figures/langfuse_web_trace_detail.png" 1782181695 79378 13cf247e941bf4d2c152be5883def505 ""
+  "main.aux" 1782185081 6696 095476c2d817d5190cbbf50b77a26509 "pdflatex"
+  "main.tex" 1782185078 39022 490f9836bd476bba2d095dd41227370a ""
   (generated)
   "main.aux"
   "main.log"

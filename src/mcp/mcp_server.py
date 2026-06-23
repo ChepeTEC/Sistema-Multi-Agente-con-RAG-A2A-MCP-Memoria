@@ -1,6 +1,7 @@
 import json
 import psycopg2
 from mcp.server.fastmcp import FastMCP
+from datetime import datetime
 
 # ==========================================
 # 1. CONFIGURACIÓN INICIAL Y CONEXIÓN
@@ -35,6 +36,13 @@ def validar_justificacion(justificacion: str) -> str | None:
     if not justificacion or len(justificacion) < 10:
         return json.dumps({"error": "Seguridad: Se requiere una justificación detallada (>10 caracteres) para ejecutar esta acción."})
     return None
+
+def validar_fecha(fecha_str):
+        try:
+            datetime.strptime(fecha_str, "%Y-%m-%d")
+            return True
+        except ValueError:
+            return False
 
 # ==========================================
 # 3. HERRAMIENTAS MCP (LECTURA Y AUDITORÍA)
@@ -80,7 +88,8 @@ def get_client_profile(cliente_id: int, justificacion: str) -> str:
             
         return json.dumps({"status": "success", "data": resultados})
     except Exception as e:
-        return json.dumps({"error": str(e)})
+        print(f"Error interno en DB: {e}")
+        return json.dumps({"error": "Error interno al procesar la base de datos. Verifica los parámetros enviados."})
     finally:
         if 'cursor' in locals(): cursor.close()
         if 'conn' in locals(): conn.close()
@@ -98,6 +107,11 @@ def search_transactions(cliente_id: int, justificacion: str, start_date: str = N
         end_date (str, opcional): Fecha fin (YYYY-MM-DD).
     """
     error = validar_justificacion(justificacion)
+
+    if start_date and not validar_fecha(start_date):
+        return json.dumps({"error": "Formato de start_date inválido. Debe ser YYYY-MM-DD."})
+    if end_date and not validar_fecha(end_date):
+        return json.dumps({"error": "Formato de end_date inválido. Debe ser YYYY-MM-DD."})
     if error: return error
 
     # Construcción dinámica de la query para soportar rangos de fechas (Rúbrica)
@@ -140,7 +154,8 @@ def search_transactions(cliente_id: int, justificacion: str, start_date: str = N
             
         return json.dumps({"status": "success", "count": len(resultados), "data": resultados})
     except Exception as e:
-        return json.dumps({"error": str(e)})
+        print(f"Error interno en DB: {e}")
+        return json.dumps({"error": "Error interno al procesar la base de datos. Verifica los parámetros enviados."})
     finally:
         if 'cursor' in locals(): cursor.close()
         if 'conn' in locals(): conn.close()
@@ -178,7 +193,8 @@ def get_client_spending_behavior(cliente_id: int, justificacion: str) -> str:
             }
         })
     except Exception as e:
-        return json.dumps({"error": str(e)})
+        print(f"Error interno en DB: {e}")
+        return json.dumps({"error": "Error interno al procesar la base de datos. Verifica los parámetros enviados."})
     finally:
         if 'cursor' in locals(): cursor.close()
         if 'conn' in locals(): conn.close()
@@ -227,8 +243,6 @@ def get_fraud_case_summary(justificacion: str, days: int = 30) -> str:
     except (TypeError, ValueError):
         return json.dumps({"error": "days debe ser un entero positivo."})
 
-    if days < 1 or days > 365:
-        return json.dumps({"error": "days debe estar entre 1 y 365 para evitar consultas masivas."})
 
     summary_query = """
         SELECT severidad, estado_caso, COUNT(*)
@@ -287,7 +301,8 @@ def get_fraud_case_summary(justificacion: str, days: int = 30) -> str:
             "cases": casos,
         })
     except Exception as e:
-        return json.dumps({"error": str(e)})
+        print(f"Error interno en DB: {e}")
+        return json.dumps({"error": "Error interno al procesar la base de datos. Verifica los parámetros enviados."})
     finally:
         if 'cursor' in locals(): cursor.close()
         if 'conn' in locals(): conn.close()
@@ -333,7 +348,8 @@ def create_fraud_case(transaccion_id: int, reason: str, severity: str, justifica
             "justificacion_registrada": justificacion
         })
     except Exception as e:
-        return json.dumps({"error": str(e)})
+        print(f"Error interno en DB: {e}")
+        return json.dumps({"error": "Error interno al procesar la base de datos. Verifica los parámetros enviados."})
     finally:
         if 'cursor' in locals(): cursor.close()
         if 'conn' in locals(): conn.close()

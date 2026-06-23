@@ -2,6 +2,10 @@ from time import perf_counter
 from collections.abc import Callable
 from copy import deepcopy
 import unicodedata
+import re
+import os
+
+from google import genai
 from src.agents.rag_agent import RAGAgent
 from src.agents.summarizer_agent import SummarizerAgent
 from src.agents.web_search_agent import WebSearchAgent
@@ -12,7 +16,6 @@ from src.observability.langfuse_client import langfuse_tracer
 from src.tools.historical_memory_tool import HistoricalMemoryTool
 from src.tools.memory_tool import MemoryTool
 from src.agents.transactional_agent import TransactionalAgent
-
 
 
 class OrchestratorAgent:
@@ -470,26 +473,71 @@ class OrchestratorAgent:
 
         # Defensive fallback required by the routing policy: when in doubt, use RAG.
         return "rag"
+    
+    @classmethod
+    def _llm_fallback_router(cls, question: str) -> str:
+        # Inicializamos el cliente con la nueva sintaxis
+        api_key = os.environ.get("GEMINI_API_KEY") or "TU_API_KEY_AQUI"
+        client = genai.Client(api_key=api_key)
+        
+        prompt = f"""
+        Eres un enrutador de intenciones de un sistema multi-agente.
+        Clasifica la siguiente frase del usuario en UNA de estas 4 categorías exactas:
+        - 'web'
+        - 'rag'
+        - 'summary'
+        - 'transactional'
+
+        Frase del usuario: "{question}"
+
+        Reglas ESTRICTAS:
+        1. Responde ÚNICAMENTE con el nombre exacto de la categoría en minúsculas.
+        2. No agregues puntos, explicaciones, saludos ni texto extra.
+        3. Si la frase es un saludo genérico, no tiene sentido, o no encaja, responde: 'orchestrator'
+        """
+        
+        try:
+            # 🚀 LA NUEVA SINTAXIS PARA LLAMAR AL MODELO
+            response = client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=prompt
+            )
+            
+            decision = response.text.strip().lower()
+            valid_categories = ["web", "rag", "summary", "transactional", "orchestrator"]
+            
+            if decision in valid_categories:
+                return decision
+            else:
+                return "orchestrator"
+                
+        except Exception as e:
+            print(f"[Fallback Ruteo] Error en la API de Gemini: {e}")
+            return "orchestrator"
 
     @classmethod
     def _select_agent(cls, question: str, raw_decision: str) -> str:
         question_lower = cls._normalize_text(question)
 
+        # 1. WEB: Enfocado puramente en buscar afuera, noticias y documentación
         web_signals = [
-            "actual",
-            "actualidad",
-            "busca",
-            "buscar",
+            "buscar en internet",
+            "buscar en la web",
+            "busqueda web",
+            "búsqueda web",
+            "noticias de",
+            "noticias sobre",
+            "actualidad sobre",
             "documentacion oficial",
-            "esta semana",
-            "hoy",
-            "internet",
-            "noticia",
-            "noticias",
-            "reciente",
-            "recientes",
-            "web",
+            "documentación oficial",
+            "informacion en internet",
+            "información en internet",
+            "novedades sobre",
+            "que esta pasando con",
+            "qué está pasando con"
         ]
+        
+        # 2. ACADÉMICO: Términos técnicos exactos de Machine Learning
         academic_signals = [
             "activacion",
             "activación",
@@ -507,118 +555,98 @@ class OrchestratorAgent:
             "relu",
             "transformer",
             "transformers",
+            "modelos de lenguaje",
+            "inteligencia artificial",
+            "machine learning"
         ]
+        
+        # 3. SUMMARY: Enfocado estrictamente en la memoria del chat actual/pasado
         summary_signals = [
-            "conversacion",
-            "conversación",
-            "esta sesion",
-            "esta sesión",
-            "hemos hablado",
-            "hemos visto",
-            "preguntas realizadas",
+            "resumen de la sesion",
+            "resumen de la sesión",
+            "resumen de nuestra conversacion",
+            "resumen de nuestra conversación",
+            "historial conversacional",
+            "historial del chat",
+            "preguntas que hice",
             "preguntas anteriores",
-            "preguntas pasadas",
-            "que hablamos",
-            "qué hablamos",
             "que hemos hablado",
             "qué hemos hablado",
-            "respuesta anterior",
+            "en esta sesion",
+            "en esta sesión",
             "sesiones anteriores",
-            "historial conversacional",
-            "historial de la sesion",
-            "historial de la sesión",
-            "memoria historica",
-            "memoria histórica",
-            "otra sesion",
-            "otra sesión",
-            "otras sesiones",
-            "anteriormente",
-            "antes",
-            "ya habiamos",
-            "ya habíamos",
-            "resumen de esta sesion",
-            "resumen de esta sesión",
-            "resume esta sesion",
-            "resume esta sesión",
-            "resume la sesion",
-            "resume la sesión",
-            "resume lo que",
-            "resumeme",
-            "resumí",
-            "resumi",
-            "sintesis de lo anterior",
-            "síntesis de lo anterior",
+            "conversaciones anteriores",
+            "de que estabamos hablando",
+            "de qué estábamos hablando",
+            "recuerdas lo que dije"
         ]
+        
+        # 4. TRANSACCIONAL: Intenciones claras de base de datos bancaria
         transactional_signals = [
             "analisis financiero",
-            "analizar gasto",
-            "auditar cliente",
+            "análisis financiero",
             "auditoria financiera",
-            "bancaria",
-            "bancario",
+            "auditoría financiera",
             "caso de fraude",
             "casos de fraude",
-            "comercio",
-            "comercios",
-            "comportamiento de gasto",
-            "transacción",
-            "transacciones",
-            "movimiento bancario",
-            "movimientos bancarios",
-            "actividad bancaria",
-            "cuenta bancaria",
-            "cuentas bancarias",
-            "estado de cuenta",
-            "estados de cuenta",
-            "financiero",
-            "financiera",
-            "gasto",
-            "gastos",
-            "historial de transacciones",
-            "últimas transacciones",
-            "último movimiento",
-            "últimos movimientos",
-            "movimiento",
-            "revisa mi cuenta",
-            "revisa mi transacción",
-            "revisa mi transacciones",
-            "perfil financiero",
-            "riesgo",
-            "sospechoso",
-            "sospechosa",
-            "fraude",
             "transaccion sospechosa",
             "transacción sospechosa",
             "transacciones sospechosas",
-            "transaccion",
-            "cliente", 
-            "clientes",
-            "cuenta",
+            "historial de transacciones",
+            "movimiento bancario",
+            "movimientos bancarios",
+            "estado de cuenta",
+            "estados de cuenta",
+            "comportamiento de gasto",
+            "perfil financiero",
             "numero de cuenta",
-            
+            "número de cuenta",
+            "auditar cliente",
+            "revisar transacciones",
+            "revisar movimientos",
+            "fraude bancario",
+            "riesgo financiero",
+            "gastos del cliente",
+            "saldo de la cuenta",
+            "ultimas transacciones",
+            "últimas transacciones"
         ]
 
-        has_web_signal = any(signal in question_lower for signal in web_signals)
-        has_academic_signal = any(signal in question_lower for signal in academic_signals)
-        has_summary_signal = any(signal in question_lower for signal in summary_signals)
-        has_transactional_signal = any(signal in question_lower for signal in transactional_signals)
+        # NUEVA LÓGICA DE BÚSQUEDA: Usando Regex para palabras completas exactas
+        def contains_signal(signals_list, text):
+            for signal in signals_list:
+                # \b asegura que coincida la palabra/frase completa y no subcadenas
+                # re.IGNORECASE por si tu _normalize_text deja alguna mayúscula
+                pattern = r'\b' + re.escape(signal) + r'\b'
+                if re.search(pattern, text, re.IGNORECASE):
+                    return True
+            return False
 
+        has_web_signal = contains_signal(web_signals, question_lower)
+        has_academic_signal = contains_signal(academic_signals, question_lower)
+        has_summary_signal = contains_signal(summary_signals, question_lower)
+        has_transactional_signal = contains_signal(transactional_signals, question_lower)
+
+        # ORDEN DE PRIORIDAD CORREGIDO
         if cls._is_historical_memory_request(question):
             return "summary"
 
         if has_summary_signal:
             return "summary"
 
-        if has_academic_signal:
-            return "rag"
-        
         if has_transactional_signal:
             return "transactional"
 
+        if has_academic_signal:
+            return "rag"
+        
         if has_web_signal:
             return "web"
+        
+        # Si ningún Regex hizo match, le pasamos la tarea a Gemini Flash
+        print(f"Regex falló para: '{question}'. Delegando a Gemini Flash...")
+        return cls._llm_fallback_router(question)
 
-        return cls._normalize_decision(raw_decision)
 
     def _get_rag_agent(self) -> RAGAgent:
         if self.rag_agent is None:

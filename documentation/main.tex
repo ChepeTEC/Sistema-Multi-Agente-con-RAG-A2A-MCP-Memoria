@@ -172,6 +172,39 @@ El agente resumidor se encarga de condensar información ya disponible dentro de
 
 Este diseño evita mezclar síntesis con recuperación. Cuando el usuario pide acciones como resumir la sesión, extraer puntos clave o recordar lo conversado, el orquestador entrega el historial relevante al resumidor. El modelo usado es más económico, ya que el objetivo no es descubrir información nueva sino reorganizar contenido existente de forma breve y clara.
 
+
+\section{Agente Transaccional}
+
+El agente transaccional se activa cuando la pregunta involucra datos ficticios sensibles, como información financiera o de fraude. Este agente no tiene acceso directo a la base de datos, sino que utiliza un servidor MCP que expone herramientas controladas para ejecutar consultas parametrizadas y retornar resultados anonimizados.
+
+El flujo asegura que el modelo de lenguaje no pueda ejecutar SQL libre ni acceder a datos sensibles sin pasar por las reglas de seguridad del MCP. La respuesta final incluye análisis basado en los datos permitidos, junto con trazabilidad de la herramienta utilizada y justificación de la consulta.
+
+
+\section{MCP Server}
+El servidor MCP funciona como intermediario entre el agente transaccional y la base de datos PostgreSQL que contiene datos ficticios. Este servidor aplica políticas de seguridad en tiempo de ejecución, enmascara información sensible y estructura los resultados en formato JSON antes de enviarlos al agente.
+
+Además, su principal función es exponer herramientas controladas que permiten al agente transaccional realizar operaciones específicas sin comprometer la seguridad de la base de datos. Por ejemplo, puede abrir casos de fraude, consultar balances o verificar transacciones, siempre bajo reglas predefinidas que garantizan el principio de mínimo privilegio.
+
+Las reglas utilizadas para el uso del MCP Server son las siguientes:
+
+\begin{itemize}
+    \item El agente transaccional solo puede invocar herramientas específicas del MCP Server, no tiene acceso directo a la base de datos.
+    \item Cada herramienta expuesta por el MCP Server tiene parámetros controlados y no permite consultas arbitrarias.
+    \item Los resultados devueltos por el MCP Server están anonimizados y enmascarados según las políticas de seguridad definidas.
+    \item Todas las interacciones con el MCP Server se registran para trazabilidad y auditoría.
+    \item Además de las mencionadas en la descripción de la tarea.
+\end{itemize}
+
+
+\section{Base de Datos Transaccional}
+La base de datos transaccional utiliza PostgreSQL y se ejecuta en un contenedor Docker aislado. Contiene datos ficticios que simulan información financiera y de fraude, y se llena mediante un script de Python que genera el volumen necesario para las pruebas del sistema.
+
+Para levantar estos servicios, se utiliza un archivo Docker Compose, el cual contiene los siguientes servicios: La base de datos transaccional, el script de población inicial y pgAdmin para aspectos administrativos de la base de datos para los desarrolladores.
+
+Posteriormente a que estos servicios estén levantados, el MCP Server puede conectarse a la base de datos para ejecutar consultas controladas y retornar resultados anonimizados al agente transaccional cuando haga sus solicitudes, garantizando así la seguridad y privacidad de los datos sensibles.
+
+
+
 \section{Memoria Temporal e Histórica}
 
 La memoria temporal conserva el contexto reciente de la sesión activa, por ejemplo preguntas y respuestas necesarias para resolver seguimientos como ``¿y cuál era la principal ventaja?'' o ``resume esta sesión''. Esta memoria permite continuidad inmediata sin depender de una nueva recuperación documental.

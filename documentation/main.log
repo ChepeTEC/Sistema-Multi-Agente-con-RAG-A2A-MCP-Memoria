@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.28 (MiKTeX 25.12) (preloaded format=pdflatex 2026.1.12)  10 JUN 2026 19:14
+This is pdfTeX, Version 3.141592653-2.6-1.40.28 (MiKTeX 25.12) (preloaded format=pdflatex 2026.1.12)  22 JUN 2026 21:24
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -240,10 +240,10 @@ LaTeX Info: Redefining \] on input line 2951.
 File: l3backend-pdftex.def 2025-10-09 L3 backend support: PDF output (pdfTeX)
 \l__color_backend_stack_int=\count305
 ) (main.aux
-LaTeX Info: Redefining \. on input line 11.
-LaTeX Info: Redefining \% on input line 11.
+LaTeX Info: Redefining \. on input line 10.
+LaTeX Info: Redefining \% on input line 10.
 Package babel Info: 'spanish' activates 'spanish' shorthands.
-(babel)             Reported on input line 11.
+(babel)             Reported on input line 10.
 )
 \openout1 = `main.aux'.
 
@@ -308,39 +308,395 @@ Package grfext Info: Graphics extension search list:
  (C:\Users\Emmanuel\AppData\Local\Programs\MiKTeX\tex/latex/00miktex\epstopdf-sys.cfg
 File: epstopdf-sys.cfg 2021/03/18 v2.0 Configuration of epstopdf for MiKTeX
 ))
-Underfull \hbox (badness 6141) in paragraph at lines 38--39
-[]\T1/ptm/m/n/10 El com-po-nen-te do-cu-men-tal se apo-ya en Retrieval-
- []
-
 <figures/ArquitecturaGeneral.png, id=1, 1445.4pt x 1726.45pt>
 File: figures/ArquitecturaGeneral.png Graphic file (type png)
 <use figures/ArquitecturaGeneral.png>
-Package pdftex.def Info: figures/ArquitecturaGeneral.png  used on input line 50.
+Package pdftex.def Info: figures/ArquitecturaGeneral.png  used on input line 49.
 (pdftex.def)             Requested size: 247.6778pt x 295.83719pt.
-<figures/ArquitecturaOrquestador.png, id=3, 1445.4pt x 1726.45pt>
-File: figures/ArquitecturaOrquestador.png Graphic file (type png)
-<use figures/ArquitecturaOrquestador.png>
-Package pdftex.def Info: figures/ArquitecturaOrquestador.png  used on input line 59.
-(pdftex.def)             Requested size: 126.0pt x 150.50024pt.
-[1{C:/Users/Emmanuel/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}{C:/Users/Emmanuel/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/base/8r.enc}
+
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [1{C:/Users/Emmanuel/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}{C:/Users/Emmanuel/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/base/8r.enc}
 
 
  <./figures/ArquitecturaGeneral.png>]
-LaTeX Font Info:    Trying to load font information for T1+pcr on input line 83.
- (C:\Users\Emmanuel\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\t1pcr.fd
-File: t1pcr.fd 2001/06/04 font definitions for T1/pcr.
-) [2 <./figures/ArquitecturaOrquestador.png>]
-<figures/DiagramaArquitecturaSeguraMCP.png, id=19, 1131.22626pt x 740.7675pt>
-File: figures/DiagramaArquitecturaSeguraMCP.png Graphic file (type png)
-<use figures/DiagramaArquitecturaSeguraMCP.png>
-Package pdftex.def Info: figures/DiagramaArquitecturaSeguraMCP.png  used on input line 123.
-(pdftex.def)             Requested size: 247.6778pt x 162.17813pt.
- [3 <./figures/DiagramaArquitecturaSeguraMCP.png>] (main.bbl
-Underfull \hbox (badness 4132) in paragraph at lines 49--52
-[]\T1/ptm/m/n/8 Tavily, ``Ta-vily search api do-cu-men-ta-tion,'' $https : / / docs . tavily . com /
+Underfull \hbox (badness 1430) in paragraph at lines 64--64
+[]\T1/ptm/b/n/8 Entrada prin-ci-
  []
 
+
+Overfull \hbox (1.74521pt too wide) in paragraph at lines 66--66
+[]\T1/ptm/m/n/8 Orquestador| 
+ []
+
+
+Underfull \hbox (badness 2443) in paragraph at lines 66--66
+[]\T1/ptm/m/n/8 Clasifica la in-ten-ción,
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 66--66
+\T1/ptm/m/n/8 se-lec-cio-na el agen-te
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 66--66
+\T1/ptm/m/n/8 ade-cua-do, in-te-gra
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 66--66
+[]\T1/ptm/m/n/8 Pregunta del
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 66--66
+\T1/ptm/m/n/8 usua-rio e
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 66--66
+\T1/ptm/m/n/8 iden-ti-fi-ca-dor
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 66--67
+[]\T1/ptm/m/n/8 Agente se-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 66--67
+\T1/ptm/m/n/8 lec-cio-na-do,
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 66--67
+\T1/ptm/m/n/8 jus-ti-fi-ca-ción,
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 66--67
+\T1/ptm/m/n/8 res-pues-ta,
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 66--67
+\T1/ptm/m/n/8 fuen-tes y
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 67--67
+[]\T1/ptm/m/n/8 Responde pre-gun-tas
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 67--67
+\T1/ptm/m/n/8 aca-dé-mi-cas usan-do
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 67--67
+\T1/ptm/m/n/8 de los apun-tes del
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 67--67
+[]\T1/ptm/m/n/8 Pregunta
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 67--67
+\T1/ptm/m/n/8 y con-tex-to
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 67--67
+\T1/ptm/m/n/8 con-ver-sa-cio-nal
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 67--67
+\T1/ptm/m/n/8 cuan-do exis-te
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 67--68
+[]\T1/ptm/m/n/8 Respuesta
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 67--68
+\T1/ptm/m/n/8 fun-da-men-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 67--68
+\T1/ptm/m/n/8 ta-da con
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 67--68
+\T1/ptm/m/n/8 fuen-tes do-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 68--68
+[]\T1/ptm/m/n/8 Web
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 68--69
+[]\T1/ptm/m/n/8 Respuesta
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 68--69
+\T1/ptm/m/n/8 ba-sa-da en
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 68--69
+\T1/ptm/m/n/8 re-sul-ta-dos
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 68--69
+\T1/ptm/m/n/8 web y
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 68--69
+\T1/ptm/m/n/8 en-la-ces
+ []
+
+
+Underfull \hbox (badness 2229) in paragraph at lines 69--69
+\T1/ptm/m/n/8 his-to-rial re-cu-pe-ra-do o
+ []
+
+
+Underfull \hbox (badness 2512) in paragraph at lines 69--69
+[]\T1/ptm/m/n/8 Solicitud de re-
+ []
+
+
+Overfull \hbox (6.79306pt too wide) in paragraph at lines 70--70
+[]\T1/ptm/m/n/8 Transaccional| 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 70--70
+[]\T1/ptm/m/n/8 Pregunta
+ []
+
+
+Underfull \hbox (badness 5741) in paragraph at lines 70--70
+\T1/ptm/m/n/8 fi-nan-cie-ra o de
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 70--71
+\T1/ptm/m/n/8 da-tos ano-
+ []
+
+
+Underfull \hbox (badness 1810) in paragraph at lines 70--71
+\T1/ptm/m/n/8 ni-mi-za-dos y
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 70--71
+\T1/ptm/m/n/8 tra-za-bi-li-dad
+ []
+
+
+Overfull \hbox (12.71631pt too wide) in paragraph at lines 62--73
+ [][] 
+ []
+
+LaTeX Font Info:    Trying to load font information for T1+pcr on input line 88.
+(C:\Users\Emmanuel\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\t1pcr.fd
+File: t1pcr.fd 2001/06/04 font definitions for T1/pcr.
 )
+Underfull \hbox (badness 6204) in paragraph at lines 98--98
+[]\T1/ptm/m/n/8 Clasificador, me-mo-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 101--102
+[]\T1/ptm/m/n/8 No re-cu-pe-ra in-for-ma-ción
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 102--102
+[]\T1/ptm/m/n/8 MCP Transac-tion
+ []
+
+
+Overfull \hbox (0.72015pt too wide) in paragraph at lines 94--105
+ [][] 
+ []
+
+<figures/ArquitecturaOrquestador.png, id=11, 1445.4pt x 1726.45pt>
+File: figures/ArquitecturaOrquestador.png Graphic file (type png)
+<use figures/ArquitecturaOrquestador.png>
+Package pdftex.def Info: figures/ArquitecturaOrquestador.png  used on input line 110.
+(pdftex.def)             Requested size: 126.0pt x 150.50024pt.
+[2 <./figures/ArquitecturaOrquestador.png>] [3]
+<figures/langfuse_traces_overview.png, id=22, 1444.64719pt x 664.73344pt>
+File: figures/langfuse_traces_overview.png Graphic file (type png)
+<use figures/langfuse_traces_overview.png>
+Package pdftex.def Info: figures/langfuse_traces_overview.png  used on input line 231.
+(pdftex.def)             Requested size: 247.6778pt x 113.95663pt.
+<figures/langfuse_rag_trace_detail.png, id=23, 860.46469pt x 688.82344pt>
+File: figures/langfuse_rag_trace_detail.png Graphic file (type png)
+<use figures/langfuse_rag_trace_detail.png>
+Package pdftex.def Info: figures/langfuse_rag_trace_detail.png  used on input line 238.
+(pdftex.def)             Requested size: 247.6778pt x 198.27168pt.
+<figures/langfuse_web_trace_detail.png, id=24, 860.46469pt x 688.82344pt>
+File: figures/langfuse_web_trace_detail.png Graphic file (type png)
+<use figures/langfuse_web_trace_detail.png>
+Package pdftex.def Info: figures/langfuse_web_trace_detail.png  used on input line 245.
+(pdftex.def)             Requested size: 247.6778pt x 198.27168pt.
+ [4]
+Overfull \vbox (15.59619pt too high) has occurred while \output is active []
+
+<figures/DiagramaArquitecturaSeguraMCP.png, id=28, 1131.22626pt x 740.7675pt>
+File: figures/DiagramaArquitecturaSeguraMCP.png Graphic file (type png)
+<use figures/DiagramaArquitecturaSeguraMCP.png>
+Package pdftex.def Info: figures/DiagramaArquitecturaSeguraMCP.png  used on input line 262.
+(pdftex.def)             Requested size: 247.6778pt x 162.17813pt.
+ [5 <./figures/langfuse_traces_overview.png> <./figures/langfuse_rag_trace_detail.png> <./figures/langfuse_web_trace_detail.png> <./figures/DiagramaArquitecturaSeguraMCP.png>]
+Underfull \hbox (badness 10000) in paragraph at lines 291--292
+[]\T1/ptm/m/n/8 Consultas co-mo
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 291--292
+\T1/ptm/m/n/8 ``re-su-me es-ta
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 291--292
+\T1/ptm/m/n/8 se-sión'' o
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 291--292
+\T1/ptm/m/n/8 se-gui-mien-tos
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 291--292
+\T1/ptm/m/n/8 de-pen-den del
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 292--292
+[]\T1/ptm/m/n/8 El RAG re-cu-pe-ra-ba
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 292--292
+\T1/ptm/m/n/8 con-tex-to li-mi-ta-do o
+ []
+
+
+Underfull \hbox (badness 4752) in paragraph at lines 292--292
+\T1/ptm/m/n/8 pa-ra me-jo-rar con-ti-nui-dad
+ []
+
+
+Underfull \hbox (badness 7558) in paragraph at lines 292--292
+\T1/ptm/m/n/8 plió la re-cu-pe-ra-ción de
+ []
+
+
+Underfull \hbox (badness 3460) in paragraph at lines 292--293
+[]\T1/ptm/m/n/8 Respuestas do-cu-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 293--294
+[]\T1/ptm/m/n/8 Las res-pues-tas
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 293--294
+\T1/ptm/m/n/8 pue-den mos-trar
+ []
+
+
+Overfull \hbox (10.8023pt too wide) in paragraph at lines 287--297
+ [][] 
+ []
+
+
+Underfull \hbox (badness 7379) in paragraph at lines 303--304
+[]\T1/ptm/m/n/10 La eva-lua-ción fun-cio-nal se de-fi-nió en el ar-chi-vo
+ []
+
+
+Underfull \hbox (badness 5504) in paragraph at lines 316--317
+[]\T1/ptm/m/n/8 Rechazo o acla-ra-
+ []
+
+
+Overfull \hbox (10.79846pt too wide) in paragraph at lines 309--323
+ [][] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 343--344
+[]\T1/pcr/m/n/8 python -m pytest
+ []
+
+[6]
+Overfull \hbox (22.79462pt too wide) in paragraph at lines 361--375
+ [][] 
+ []
+
+
+Underfull \hbox (badness 1817) in paragraph at lines 391--392
+[]\T1/ptm/m/n/10 Copiar \T1/pcr/m/n/10 .env.example \T1/ptm/m/n/10 co-mo \T1/pcr/m/n/10 .env \T1/ptm/m/n/10 y com-ple-tar
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 391--392
+\T1/ptm/m/n/10 las lla-ves ne-ce-sa-rias: \T1/pcr/m/n/10 GOOGLE_API_KEY\T1/ptm/m/n/10 ,
+ []
+
+
+Underfull \hbox (badness 2941) in paragraph at lines 395--396
+\T1/ptm/m/n/10 Es-te flu-jo ini-cia Doc-ker, bac-kend y fron-tend de
+ []
+
+
+Underfull \hbox (badness 5091) in paragraph at lines 395--396
+\T1/ptm/m/n/10 for-ma coor-di-na-da. El bac-kend que-da usual-men-te
+ []
+
+
+Underfull \hbox (badness 2744) in paragraph at lines 395--396
+\T1/ptm/m/n/10 en \T1/pcr/m/n/10 http://127.0.0.1:8000 \T1/ptm/m/n/10 y la in-ter-faz en
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 397--398
+[]\T1/ptm/m/n/10 Revisar la eva-lua-ción fun-cio-nal de-fi-ni-da en
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 397--398
+\T1/pcr/m/n/10 evaluation/functional_questions.json\T1/ptm/m/n/10 ,
+ []
+
+
+Underfull \hbox (badness 1354) in paragraph at lines 400--401
+[]\T1/ptm/m/n/10 Si se re-quie-re eje-cu-tar com-po-nen-tes por se-pa-ra-do, el
+ []
+
+[7]
 
 ** Conference Paper **
 Before submitting the final camera ready copy, remember to:
@@ -352,11 +708,11 @@ Before submitting the final camera ready copy, remember to:
  uses only Type 1 fonts and that every step in the generation
  process uses the appropriate paper size.
 
-[4
+[8
 
 ] (main.aux
-LaTeX Info: Redefining \. on input line 11.
-LaTeX Info: Redefining \% on input line 11.
+LaTeX Info: Redefining \. on input line 10.
+LaTeX Info: Redefining \% on input line 10.
 )
  ***********
 LaTeX2e <2025-11-01>
@@ -364,17 +720,17 @@ L3 programming layer <2025-12-24>
  ***********
  ) 
 Here is how much of TeX's memory you used:
- 5390 strings out of 467871
- 92532 string characters out of 5416924
- 517354 words of memory out of 5000000
- 34198 multiletter control sequences out of 15000+600000
- 733411 words of font info for 142 fonts, out of 8000000 for 9000
+ 5406 strings out of 467871
+ 93397 string characters out of 5416924
+ 528574 words of memory out of 5000000
+ 34215 multiletter control sequences out of 15000+600000
+ 739248 words of font info for 146 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 59i,8n,67p,944b,365s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 59i,11n,67p,1102b,365s stack positions out of 10000i,1000n,20000p,200000b,200000s
 <C:/Users/Emmanuel/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/Emmanuel/AppData/Local/Programs/MiKTeX/fonts/type1/urw/courier/ucrr8a.pfb><C:/Users/Emmanuel/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmb8a.pfb><C:/Users/Emmanuel/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmbi8a.pfb><C:/Users/Emmanuel/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmr8a.pfb><C:/Users/Emmanuel/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmri8a.pfb>
-Output written on main.pdf (4 pages, 371651 bytes).
+Output written on main.pdf (8 pages, 621934 bytes).
 PDF statistics:
- 53 PDF objects out of 1000 (max. 8388607)
+ 73 PDF objects out of 1000 (max. 8388607)
  0 named destinations out of 1000 (max. 500000)
- 16 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 31 words of extra memory for PDF output out of 10000 (max. 10000000)
 
