@@ -46,7 +46,6 @@ def start_backend():
         return None
 
     env = os.environ.copy()
-    env["LANGFUSE_ENABLED"] = "false"
     command = [
         "python",
         "-m",

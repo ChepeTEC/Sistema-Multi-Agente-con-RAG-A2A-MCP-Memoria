@@ -12,11 +12,14 @@ class AppStartupTests(unittest.TestCase):
         self.assertIsNone(process)
         popen.assert_not_called()
 
-    def test_start_backend_sets_langfuse_default_false(self):
+    def test_start_backend_respects_langfuse_environment(self):
         fake_process = MagicMock()
         fake_process.terminate = MagicMock()
 
-        with patch("app.is_port_open", return_value=False), patch(
+        with patch.dict("app.os.environ", {"LANGFUSE_ENABLED": "true"}), patch(
+            "app.is_port_open",
+            return_value=False,
+        ), patch(
             "app.wait_for_port",
             return_value=True,
         ), patch("app.subprocess.Popen", return_value=fake_process) as popen:
@@ -24,7 +27,7 @@ class AppStartupTests(unittest.TestCase):
 
         self.assertIs(process, fake_process)
         kwargs = popen.call_args.kwargs
-        self.assertEqual(kwargs["env"]["LANGFUSE_ENABLED"], "false")
+        self.assertEqual(kwargs["env"]["LANGFUSE_ENABLED"], "true")
         self.assertIn("uvicorn", popen.call_args.args[0])
         self.assertIn("src.api.server:app", popen.call_args.args[0])
 
